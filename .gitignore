@@ -1,0 +1,5 @@
+.godot/
+addons/hegel/bin/
+rust/target/
+*.received.txt
+reports/
