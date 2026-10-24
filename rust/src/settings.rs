@@ -1,4 +1,4 @@
-use crate::{Outcome, call, hstr, out_of_range};
+use crate::{Outcome, call, hstr, out_of_range, string_from};
 use godot::prelude::*;
 use hegel_c as c;
 use std::ptr;
@@ -122,6 +122,83 @@ impl HegelNativeSettings {
             Ok(v) => call(|ctx| unsafe { c::hegel_settings_set_verbosity(ctx, s, v) }),
             Err(_) => out_of_range("verbosity", verbosity),
         })
+    }
+
+    #[func]
+    fn get_test_cases(&mut self) -> i64 {
+        let s = self.raw;
+        let mut out = 0u64;
+        self.record(call(|ctx| unsafe {
+            c::hegel_settings_get_test_cases(ctx, s, &mut out)
+        }));
+        i64::try_from(out).unwrap_or(i64::MAX)
+    }
+
+    #[func]
+    fn get_verbosity(&mut self) -> i64 {
+        let s = self.raw;
+        let mut out = c::hegel_verbosity_t::HEGEL_VERBOSITY_NORMAL;
+        self.record(call(|ctx| unsafe {
+            c::hegel_settings_get_verbosity(ctx, s, &mut out)
+        }));
+        out as i64
+    }
+
+    /// The seed, bit-cast to int, or 0 when none is set.
+    #[func]
+    fn get_seed(&mut self) -> i64 {
+        let s = self.raw;
+        let (mut out, mut has) = (0u64, false);
+        self.record(call(|ctx| unsafe {
+            c::hegel_settings_get_seed(ctx, s, &mut out, &mut has)
+        }));
+        out as i64
+    }
+
+    #[func]
+    fn has_seed(&mut self) -> bool {
+        let s = self.raw;
+        let (mut seed, mut out) = (0u64, false);
+        self.record(call(|ctx| unsafe {
+            c::hegel_settings_get_seed(ctx, s, &mut seed, &mut out)
+        }));
+        out
+    }
+
+    #[func]
+    fn get_derandomize(&mut self) -> bool {
+        let s = self.raw;
+        let mut out = false;
+        self.record(call(|ctx| unsafe {
+            c::hegel_settings_get_derandomize(ctx, s, &mut out)
+        }));
+        out
+    }
+
+    /// The database root directory, "" when disabled, or null for the
+    /// engine's default location.
+    #[func]
+    fn get_database(&mut self) -> Variant {
+        let s = self.raw;
+        let mut out = ptr::null();
+        self.record(call(|ctx| unsafe {
+            c::hegel_settings_get_database(ctx, s, &mut out)
+        }));
+        if out.is_null() {
+            return Variant::nil();
+        }
+        // SAFETY: a non-NULL pointer borrows the handle, which is alive.
+        GString::from(&string_from(unsafe { *out })).to_variant()
+    }
+
+    #[func]
+    fn get_suppress_health_check(&mut self) -> i64 {
+        let s = self.raw;
+        let mut out = 0u32;
+        self.record(call(|ctx| unsafe {
+            c::hegel_settings_get_suppress_health_check(ctx, s, &mut out)
+        }));
+        i64::from(out)
     }
 
     /// A bitwise OR of the `HC_*` constants.

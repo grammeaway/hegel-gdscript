@@ -37,11 +37,11 @@ The user-facing core, in `addons/hegel/`:
 
 ## Completion
 
-- [ ] `just check` is green.
-- [ ] `minimal(integers(), x > 100)` returns `101`, `minimal(integers(101, max), true)` returns `101`, and `minimal(integers(), true)` returns `0`.
-- [ ] Making simplest mode call the engine anyway turns a test red. A failed `check` enters simplest mode the same way a stop-test does, so it can stand in for one here. Check this, then restore it.
-- [ ] Making the last terminal event win instead of the first turns a test red. Check this, then restore it.
-- [ ] `grep -rn "HegelNative" addons/hegel/ --include=*.gd` lists only `hegel.gd`, `settings.gd`, `result.gd` and `test_case.gd`.
+- [x] `just check` is green.
+- [x] `minimal(integers(), x > 100)` returns `101`, `minimal(integers(101, max), true)` returns `101`, and `minimal(integers(), true)` returns `0`.
+- [x] Making simplest mode call the engine anyway turns a test red. A failed `check` enters simplest mode the same way a stop-test does, so it can stand in for one here. Check this, then restore it.
+- [x] Making the last terminal event win instead of the first turns a test red. Check this, then restore it.
+- [x] `grep -rn "HegelNative" addons/hegel/ --include=*.gd` lists only `hegel.gd`, `settings.gd`, `result.gd` and `test_case.gd`.
 
 ## Non-goals
 

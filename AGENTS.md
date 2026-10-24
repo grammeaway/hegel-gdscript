@@ -39,6 +39,14 @@ docs/sagas/          plans and their progress logs
 - libhegel's u64 labels and seeds cross into GDScript bit-cast to `int`.
 - Each thread gets its own libhegel context, as in upstream's Python frontend.
 
+**The GDScript layer** in `addons/hegel/` is the user API. Only `hegel.gd`, `settings.gd`, `result.gd` and `test_case.gd` touch native classes; generators go through `HegelTestCase`'s `_draw_*` / `_start_span` / `_stop_span` primitives.
+
+- **Run loop** (`Hegel.run`): `next_test_case`, `body.call(tc)`, `mark_complete` with the case's status, draining engine output after each engine step; then the run result becomes a `HegelResult`. A nested `Hegel.run` returns a usage error.
+- **Terminal events.** A case ends at its first failed `check` (INTERESTING, origin `check: source:line`), failed `assume` (INVALID), or engine stop-test (OVERRUN). Later events change nothing. An engine error that isn't stop-test or assume ends the run with a usage or internal error, never a counterexample.
+- **Simplest mode.** Once a case has ended, primitives return their simplest value without calling the engine, so the body can run on or return early. GDScript has no exceptions to unwind it.
+- `HegelSettings.new()` reads the engine's resolved profile (`HEGEL_*` env, `ci`), and the run sets every field on a fresh native handle. The database defaults to `user://hegel/` only where the profile leaves it at the engine default.
+- Generator factories live on `HegelGenerators` (`generators.gd`); each generator is a `HegelGenerator` with a span `label` from `hegel-gdscript.<kind>`. Tests and docs alias it as `const Gs := preload("res://addons/hegel/generators.gd")`.
+
 **The engine is the authority.** When libhegel behaves differently from upstream's frontends or Hypothesis, record it in the saga's Found section and ask the owner. Keep workarounds out of the addon.
 
 **Upstream is the reference.** Before designing a behaviour, read how `/tmp/hegel/frontends/python/python/hegel/` and `/tmp/hegel/frontends/cpp/` do it, and read `libhegel/include/hegel.h`. If `/tmp/hegel` is missing, clone `https://github.com/hegeldev/hegel` at tag `libhegel/0.48.0`. Copy their semantics, in GDScript idioms.
@@ -54,6 +62,7 @@ docs/sagas/          plans and their progress logs
 - Every test runs against the real engine, with no mocks. Every public function has a test.
 - Seed or derandomize every run, and disable the database, unless the test is about the database.
 - There is no GDScript coverage tool, so prove each new test can fail: break the behaviour, watch it go red, restore it.
+- `tests/support/quality.gd` holds upstream's `minimal`, `find_any` and `assert_all_examples`; `tests/quality/` ports upstream's shrink and find quality tests per generator.
 - gdUnit4 adds its own `Logger` and reports script errors and `push_error` during a test as failures. A test that provokes an error on purpose has to account for that.
 
 ## Gotchas
