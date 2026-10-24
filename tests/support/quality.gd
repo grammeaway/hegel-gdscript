@@ -1,8 +1,8 @@
 extends RefCounted
 ## Contract and quality helpers, after upstream's
 ## frontends/cpp/tests/common/utils.h: minimal runs with seed 1, the others
-## derandomized, all with the database disabled. They fail cases through
-## tc.check alone, so no error reaches gdUnit4's logger.
+## derandomized, all silent and with the database disabled. They fail cases
+## through tc.check alone, so no error reaches gdUnit4's logger.
 
 
 static func _settings(test_cases: int, seeded := false) -> HegelSettings:
@@ -12,6 +12,7 @@ static func _settings(test_cases: int, seeded := false) -> HegelSettings:
 	settings.seed = 1
 	settings.has_seed = seeded
 	settings.database = ""
+	settings._silent = true
 	return settings
 
 

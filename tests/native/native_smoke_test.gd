@@ -22,9 +22,11 @@ func _settings(seed: int) -> HegelNativeSettings:
 	return settings
 
 
-func _run(settings: HegelNativeSettings) -> Outcome:
+## Runs the property, or replays [param blob] when one is given.
+func _run(settings: HegelNativeSettings, blob := "") -> Outcome:
 	var run := HegelNativeRun.new()
-	assert_int(run.start(settings)).is_equal(HegelNative.OK)
+	var started := run.start_blob(settings, blob) if blob else run.start(settings)
+	assert_int(started).is_equal(HegelNative.OK)
 	var outcome := Outcome.new()
 	var tc := run.next_test_case()
 	while tc != null:
@@ -61,6 +63,20 @@ func test_failure_carries_its_origin_and_a_blob() -> void:
 	assert_str(result.failure_caveat(0)).is_empty()
 	assert_int(result.error_kind()).is_equal(HegelNativeRunResult.RUN_ERROR_NONE)
 	assert_str(result.error()).is_empty()
+
+
+func test_start_blob_replays_the_failure() -> void:
+	var blob := _run(_settings(SEED)).result.failure_blob(0)
+	var replayed := _run(_settings(SEED), blob)
+	assert_int(replayed.result.status()).is_equal(HegelNativeRunResult.RUN_STATUS_FAILED)
+	assert_int(replayed.captured_failures.back()).is_equal(LIMIT)
+	assert_str(replayed.result.failure_blob(0)).is_empty()
+
+
+func test_start_blob_rejects_a_bad_blob() -> void:
+	var run := HegelNativeRun.new()
+	assert_int(run.start_blob(_settings(SEED), "not a blob")).is_equal(HegelNative.E_INVALID_ARG)
+	assert_str(run.last_error).is_not_empty()
 
 
 func test_reading_a_missing_failure_fails() -> void:

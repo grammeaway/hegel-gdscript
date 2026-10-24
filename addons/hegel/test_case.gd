@@ -23,21 +23,38 @@ var _origin := ""
 ## Set when the case ended the whole run with an error instead.
 var _run_error_kind := HegelResult.ErrorKind.NONE
 var _run_error := ""
-## The failed check's message.
-var _failure_message := ""
-## The notes, in order, for the failure report.
-var _notes: PackedStringArray = []
+## The failure report's line for the terminal event, when the case failed.
+var _failure := ""
+## The draw and note lines for the failure report, while [member _recording].
+var _lines: PackedStringArray = []
+var _recording: bool
+## Whether recorded lines are also printed as they happen.
+var _echo: bool
+var _draw_depth := 0
+## Uses of each draw name, and the names already shown, for [method _display_name].
+var _name_counts := {}
+var _shown_names := {}
 
 
-func _init(native: HegelNativeTestCase) -> void:
+func _init(native: HegelNativeTestCase, recording := false, echo := false) -> void:
 	_native = native
+	_recording = recording
+	_echo = echo
 
 
-## Draws a value from [param generator].
-func draw(generator: HegelGenerator) -> Variant:
+## Draws a value from [param generator]. The failure report shows it as
+## [code]var <name> = <value>[/code]: unnamed draws are [code]draw_1[/code],
+## [code]draw_2[/code], …, and a [param name] used again gets [code]_2[/code],
+## [code]_3[/code], …. Draws made inside a generator are part of its value,
+## and aren't shown on their own.
+func draw(generator: HegelGenerator, name := "") -> Variant:
+	_draw_depth += 1
 	_start_span(generator.label)
 	var value: Variant = generator._draw(self)
 	_stop_span()
+	_draw_depth -= 1
+	if _draw_depth == 0 and _records():
+		_record("var %s = %s" % [_display_name(name), var_to_str(value)])
 	return value
 
 
@@ -56,14 +73,49 @@ func assume(condition: bool) -> bool:
 ## report. Return from the body when it gives false.
 func check(condition: bool, message := "") -> bool:
 	if not condition and not _ended:
-		_end(HegelNativeTestCase.STATUS_INTERESTING, "check: " + _caller_location())
-		_failure_message = message
+		var location := _caller_location()
+		_end(HegelNativeTestCase.STATUS_INTERESTING, "check: " + location)
+		_failure = (
+			"Check failed: %s (%s)" % [message, location]
+			if message
+			else "Check failed (%s)" % location
+		)
 	return condition
 
 
-## Adds [param message] to the failure report of this test case.
+## Adds [param message] to the failure report, between the drawn values, in
+## the order it was made.
 func note(message: String) -> void:
-	_notes.append(message)
+	if _records():
+		_record(message)
+
+
+## Nothing is recorded after the terminal event, since upstream's body stops there.
+func _records() -> bool:
+	return _recording and not _ended
+
+
+func _record(line: String) -> void:
+	_lines.append(line)
+	if _echo:
+		printerr(line)
+
+
+## Upstream's draw names: an unnamed draw counts up from [code]draw_1[/code];
+## a name shows bare, then numbered from its use count, skipping names shown.
+func _display_name(name: String) -> String:
+	var base := name if name else "draw"
+	var count: int = _name_counts.get(base, 0) + 1
+	_name_counts[base] = count
+	var shown := base
+	if not name or count > 1 or _shown_names.has(base):
+		var suffix := count
+		shown = "%s_%d" % [base, suffix]
+		while _shown_names.has(shown):
+			suffix += 1
+			shown = "%s_%d" % [base, suffix]
+	_shown_names[shown] = true
+	return shown
 
 
 ## Marks the case's terminal event. Only the first one counts.

@@ -42,11 +42,11 @@ After p2, a failing run says *that* it failed, and gives an origin and a blob. I
 
 ## Completion
 
-- [ ] `just check` is green.
-- [ ] Every subject's approved file is committed and matches.
-- [ ] Changing the draw-line prefix from `var ` to `let ` turns the snapshot tests red with `.received.txt` files. Check this, then restore it.
-- [ ] `Hegel.replay(<blob from a failing run>, body)` fails with the same report body, and passes, with the stale-blob error, once the body is fixed.
-- [ ] Removing the database key turns the database test red. Check this, then restore it.
+- [x] `just check` is green.
+- [x] Every subject's approved file is committed and matches.
+- [x] Changing the draw-line prefix from `var ` to `let ` turns the snapshot tests red with `.received.txt` files. Check this, then restore it.
+- [x] `Hegel.replay(<blob from a failing run>, body)` fails with the same report body, and passes, with the stale-blob error, once the body is fixed.
+- [x] Removing the database key turns the database test red. Check this, then restore it.
 
 ## Non-goals
 

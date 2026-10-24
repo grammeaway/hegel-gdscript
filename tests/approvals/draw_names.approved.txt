@@ -1,0 +1,20 @@
+--- Failure: res://tests/subjects/draw_names.gd::_run ---
+Falsified after 1 test case (0 discarded):
+
+  var draw_1 = 0
+  var x = 0
+  var x_2 = 1
+  var x_3 = 2
+  var count = 0
+  var draw_2 = 0
+
+Check failed: always (res://tests/subjects/draw_names.gd:12)
+Reproduce with: Hegel.replay("[blob]", <body>)
+ERROR: Hegel: property failed at check: res://tests/subjects/draw_names.gd:12; the report is above
+   at: push_error ([godot])
+   GDScript backtrace (most recent call first):
+       [0] _announced (res://addons/hegel/hegel.gd)
+       [1] _guarded (res://addons/hegel/hegel.gd)
+       [2] run (res://addons/hegel/hegel.gd)
+       [3] _run (res://tests/subjects/draw_names.gd:5)
+       [4] _initialize (res://tests/support/subject.gd:9)

@@ -1,0 +1,11 @@
+Starting phase: Generate
+Running test case
+a note
+var draw_1 = 0
+Running test case
+a note
+var draw_1 = 5
+Running test case
+a note
+var draw_1 = 7
+Ending phase: Generate

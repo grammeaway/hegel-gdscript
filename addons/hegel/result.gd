@@ -12,6 +12,9 @@ enum ErrorKind {
 	UNSATISFIABLE = 4,  ## No valid test case was found: every one was rejected.
 	USAGE = 5,  ## Hegel was misused. [member error] says what to fix.
 	INTERNAL = 6,  ## A bug in Hegel.
+	## [method Hegel.replay]'s blob didn't fail. Unlike the others, this kind
+	## comes from hegel-gdscript, not from the engine.
+	DID_NOT_REPRODUCE = 7,
 }
 
 
@@ -36,6 +39,9 @@ var error_kind := ErrorKind.NONE
 var error: String
 ## How many times the test body ran, counting rejected cases and shrinking.
 var test_cases: int
+## The failure report for each of [member failures], in order: the shrunk
+## draws and notes, what failed, and how to replay it. "" unless the run failed.
+var report: String
 
 
 static func _errored(kind: ErrorKind, message: String, test_cases_run := 0) -> HegelResult:

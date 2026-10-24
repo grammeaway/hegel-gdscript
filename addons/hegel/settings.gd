@@ -48,6 +48,8 @@ var database: String
 var verbosity: Verbosity
 ## A bitwise OR of [enum HealthCheck] flags not to fail the run on.
 var suppress_health_checks: int
+# Internal: neither prints the report nor raises push_error, for the addon's own tests.
+var _silent := false
 
 
 func _init() -> void:
@@ -62,9 +64,10 @@ func _init() -> void:
 	suppress_health_checks = native.get_suppress_health_check()
 
 
-## A native settings handle with every field set. Check its [code]last_result[/code]:
+## A native settings handle with every field set, and [param database_key]
+## ("" for none). Check its [code]last_result[/code]:
 ## on failure it holds the first failing call's result and message.
-func _to_native() -> HegelNativeSettings:
+func _to_native(database_key: String) -> HegelNativeSettings:
 	var native := HegelNativeSettings.new()
 	if native.last_result != HegelNative.OK:
 		return native
@@ -74,6 +77,7 @@ func _to_native() -> HegelNativeSettings:
 		native.set_seed.bind(seed, has_seed),
 		native.set_derandomize.bind(derandomize),
 		native.set_database.bind(path),
+		native.set_database_key.bind(database_key),
 		native.set_verbosity.bind(verbosity),
 		native.set_suppress_health_check.bind(suppress_health_checks),
 	]

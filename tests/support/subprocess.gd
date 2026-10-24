@@ -1,0 +1,44 @@
+extends RefCounted
+## Runs a script in a fresh Godot process, for the report snapshot tests (D1c).
+
+
+## Regex and replacement pairs for [method scrub].
+const _PATTERNS := [
+	['Hegel\\.replay\\("[^"]+"', 'Hegel.replay("[blob]"'],
+	["at: (\\w+) \\([^)]*\\)", "at: $1 ([godot])"],
+	["(res://addons/hegel/[\\w/]+\\.gd):\\d+", "$1"],
+]
+
+
+## A finished process: its exit code and its scrubbed, combined output.
+class Outcome:
+	extends RefCounted
+	var exit_code: int
+	var output: String
+
+
+## Runs [param script] headless in this project, and scrubs its output.
+static func run(script: String) -> Outcome:
+	var project := ProjectSettings.globalize_path("res://")
+	var output := []
+	var outcome := Outcome.new()
+	outcome.exit_code = OS.execute(
+		OS.get_executable_path(), ["--headless", "--path", project, "-s", script], output, true
+	)
+	outcome.output = scrub("".join(output))
+	return outcome
+
+
+## [param text] without what varies between runs and machines: the banner,
+## blobs, absolute paths, Godot's source locations, and the addon's line numbers.
+static func scrub(text: String) -> String:
+	var lines: PackedStringArray = []
+	for line: String in text.replace("\r\n", "\n").split("\n"):
+		if not (line.begins_with("Initialize godot-rust") or line.begins_with("Godot Engine v")):
+			lines.append(line)
+	var scrubbed := "\n".join(lines).strip_edges() + "\n"
+	scrubbed = scrubbed.replace(ProjectSettings.globalize_path("res://").trim_suffix("/"), "[path]")
+	scrubbed = scrubbed.replace(OS.get_user_data_dir(), "[path]")
+	for pattern: Array in _PATTERNS:
+		scrubbed = RegEx.create_from_string(pattern[0]).sub(scrubbed, pattern[1], true)
+	return scrubbed

@@ -1,0 +1,8 @@
+ERROR: Hegel run error (USAGE): generate_integer requires min_value <= max_value, got [5, 1]
+   at: push_error ([godot])
+   GDScript backtrace (most recent call first):
+       [0] _announced (res://addons/hegel/hegel.gd)
+       [1] _guarded (res://addons/hegel/hegel.gd)
+       [2] run (res://addons/hegel/hegel.gd)
+       [3] _run (res://tests/subjects/run_error.gd:5)
+       [4] _initialize (res://tests/support/subject.gd:9)

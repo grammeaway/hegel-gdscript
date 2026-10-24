@@ -26,6 +26,8 @@ addons/hegel/        the shipped addon
 addons/gdUnit4/      vendored test framework, dev-only
 rust/                the gdext crate over libhegel (`hegeltest-c`, linked statically)
 tests/               gdUnit4 suites, mirroring addons/hegel/; tests/native/ drives the native classes
+  subjects/          one-scenario SceneTree scripts, run in a fresh process by report_snapshot_test.gd
+  approvals/         each subject's approved, scrubbed output
 docs/sagas/          plans and their progress logs
 ```
 
@@ -41,7 +43,8 @@ docs/sagas/          plans and their progress logs
 
 **The GDScript layer** in `addons/hegel/` is the user API. Only `hegel.gd`, `settings.gd`, `result.gd` and `test_case.gd` touch native classes; generators go through `HegelTestCase`'s `_draw_*` / `_start_span` / `_stop_span` primitives.
 
-- **Run loop** (`Hegel.run`): `next_test_case`, `body.call(tc)`, `mark_complete` with the case's status, draining engine output after each engine step; then the run result becomes a `HegelResult`. A nested `Hegel.run` returns a usage error.
+- **Run loop** (`Hegel.run`, and `Hegel.replay` through `start_blob`): `next_test_case`, `body.call(tc)`, `mark_complete` with the case's status, draining engine output after each engine step; then the run result becomes a `HegelResult`. A nested run returns a usage error. The database key is `<script>::<function>` of `run`'s caller, from `get_stack()`.
+- **Report.** A case records draw lines and notes when the engine stamps it (`should_capture`, not at quiet verbosity) or the run is verbose. Captures are kept per origin, ranked as upstream's Python `_Captured`, and each failure's report is built from its origin's capture. Unless `settings._silent`, a failure prints its report with `printerr` plus a one-line `push_error`, and an error goes through `push_error`; the addon's own in-process tests set `_silent`.
 - **Terminal events.** A case ends at its first failed `check` (INTERESTING, origin `check: source:line`), failed `assume` (INVALID), or engine stop-test (OVERRUN). Later events change nothing. An engine error that isn't stop-test or assume ends the run with a usage or internal error, never a counterexample.
 - **Simplest mode.** Once a case has ended, primitives return their simplest value without calling the engine, so the body can run on or return early. GDScript has no exceptions to unwind it.
 - `HegelSettings.new()` reads the engine's resolved profile (`HEGEL_*` env, `ci`), and the run sets every field on a fresh native handle. The database defaults to `user://hegel/` only where the profile leaves it at the engine default.
@@ -63,7 +66,8 @@ docs/sagas/          plans and their progress logs
 - Seed or derandomize every run, and disable the database, unless the test is about the database.
 - There is no GDScript coverage tool, so prove each new test can fail: break the behaviour, watch it go red, restore it.
 - `tests/support/quality.gd` holds upstream's `minimal`, `find_any` and `assert_all_examples`; `tests/quality/` ports upstream's shrink and find quality tests per generator.
-- gdUnit4 adds its own `Logger` and reports script errors and `push_error` during a test as failures. A test that provokes an error on purpose has to account for that.
+- gdUnit4 adds its own `Logger` and reports script errors during a test as failures; `push_error` only when `gdunit4/settings/report/godot/push_error` is on (off by default). A test that provokes an error on purpose has to account for that.
+- **Snapshot tests.** `tests/report_snapshot_test.gd` runs every script in `tests/subjects/` with `tests/support/subprocess.gd`, which scrubs the banner, blobs, absolute paths, Godot source locations and the addon's line numbers. A mismatch writes `tests/approvals/<name>.received.txt` (gitignored). Read it; to accept it, rename it over `<name>.approved.txt`.
 
 ## Gotchas
 

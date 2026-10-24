@@ -1,0 +1,19 @@
+--- Failure: res://tests/subjects/notes.gd::_run ---
+Falsified after 2 test cases (0 discarded):
+
+  var draw_1 = 0
+  var draw_2 = 1
+  xs has 2 elements
+  first line
+  second line
+
+Check failed: sorted output (res://tests/subjects/notes.gd:10)
+Reproduce with: Hegel.replay("[blob]", <body>)
+ERROR: Hegel: property failed at check: res://tests/subjects/notes.gd:10; the report is above
+   at: push_error ([godot])
+   GDScript backtrace (most recent call first):
+       [0] _announced (res://addons/hegel/hegel.gd)
+       [1] _guarded (res://addons/hegel/hegel.gd)
+       [2] run (res://addons/hegel/hegel.gd)
+       [3] _run (res://tests/subjects/notes.gd:5)
+       [4] _initialize (res://tests/support/subject.gd:9)

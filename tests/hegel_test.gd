@@ -10,6 +10,7 @@ func _settings(test_cases := 100) -> HegelSettings:
 	settings.seed = 1
 	settings.has_seed = true
 	settings.database = ""
+	settings._silent = true
 	return settings
 
 

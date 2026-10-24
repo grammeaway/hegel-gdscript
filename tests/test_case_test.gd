@@ -9,6 +9,7 @@ func _settings() -> HegelSettings:
 	settings.seed = 1
 	settings.has_seed = true
 	settings.database = ""
+	settings._silent = true
 	return settings
 
 
@@ -45,17 +46,15 @@ func test_check_origin_is_the_calling_line() -> void:
 	assert_str(result.failures[0].origin).is_equal("check: res://tests/test_case_test.gd:%d" % line[0])
 
 
-func test_check_records_its_message() -> void:
-	var messages: Array[String] = []
-	Hegel.run(
+func test_report_shows_the_first_failed_check() -> void:
+	var result := Hegel.run(
 		func(tc: HegelTestCase) -> void:
 			tc.check(false, "first")
-			tc.check(false, "second")
-			messages.append(tc._failure_message),
+			tc.check(false, "second"),
 		_settings()
 	)
-	assert_array(messages).is_not_empty()
-	assert_str(messages[0]).is_equal("first")
+	assert_str(result.report).contains("Check failed: first (res://tests/test_case_test.gd:")
+	assert_str(result.report).not_contains("second")
 
 
 func test_failed_check_then_assume_stays_a_failure() -> void:
@@ -110,17 +109,15 @@ func test_invalid_draw_is_a_usage_error_not_a_failure() -> void:
 	assert_int(result.test_cases).is_equal(1)
 
 
-func test_note_is_kept_for_the_report() -> void:
-	var notes: Array[PackedStringArray] = []
-	Hegel.run(
+func test_notes_are_in_the_report_in_order() -> void:
+	var result := Hegel.run(
 		func(tc: HegelTestCase) -> void:
 			tc.note("one")
 			tc.note("two")
-			notes.append(tc._notes),
+			tc.check(false),
 		_settings()
 	)
-	assert_array(notes).is_not_empty()
-	assert_array(Array(notes[0])).is_equal(["one", "two"])
+	assert_str(result.report).contains("\n  one\n  two\n")
 
 
 func test_generator_without_draw_is_a_usage_error() -> void:

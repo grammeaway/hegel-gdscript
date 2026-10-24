@@ -1,0 +1,15 @@
+--- Failure: res://tests/subjects/discarded.gd::_run ---
+Falsified after 1 test case (1 discarded):
+
+  var draw_1 = 11
+
+Check failed: x < 10 (res://tests/subjects/discarded.gd:10)
+Reproduce with: Hegel.replay("[blob]", <body>)
+ERROR: Hegel: property failed at check: res://tests/subjects/discarded.gd:10; the report is above
+   at: push_error ([godot])
+   GDScript backtrace (most recent call first):
+       [0] _announced (res://addons/hegel/hegel.gd)
+       [1] _guarded (res://addons/hegel/hegel.gd)
+       [2] run (res://addons/hegel/hegel.gd)
+       [3] _run (res://tests/subjects/discarded.gd:5)
+       [4] _initialize (res://tests/support/subject.gd:9)

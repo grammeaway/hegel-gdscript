@@ -1,0 +1,12 @@
+--- Failure: res://tests/subjects/quiet.gd::_run ---
+Falsified after 2 test cases (0 discarded):
+Check failed: x < 10 (res://tests/support/subject.gd:29)
+Reproduce with: Hegel.replay("[blob]", <body>)
+ERROR: Hegel: property failed at check: res://tests/support/subject.gd:29; the report is above
+   at: push_error ([godot])
+   GDScript backtrace (most recent call first):
+       [0] _announced (res://addons/hegel/hegel.gd)
+       [1] _guarded (res://addons/hegel/hegel.gd)
+       [2] run (res://addons/hegel/hegel.gd)
+       [3] _run (res://tests/subjects/quiet.gd:7)
+       [4] _initialize (res://tests/support/subject.gd:9)

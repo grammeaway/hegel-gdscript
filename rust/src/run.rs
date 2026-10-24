@@ -1,6 +1,6 @@
 use crate::settings::HegelNativeSettings;
 use crate::test_case::HegelNativeTestCase;
-use crate::{Outcome, call, opt_string_from, out_of_range, string_from};
+use crate::{Outcome, call, hstr, opt_string_from, out_of_range, string_from};
 use godot::prelude::*;
 use hegel_c as c;
 use hegel_c::hegel_result_t as Rc;
@@ -54,6 +54,20 @@ impl HegelNativeRun {
         self.last_error = error;
         result
     }
+
+    /// Frees any run this object held, then starts one through `start`.
+    fn restart(
+        &mut self,
+        start: impl FnOnce(*mut c::HegelContext, *mut c_void, *mut *mut c::HegelRun) -> Rc,
+    ) -> i64 {
+        call(|ctx| unsafe { c::hegel_run_free(ctx, self.raw) });
+        self.raw = ptr::null_mut();
+        let user_data = Arc::as_ptr(&self.output) as *mut c_void;
+        let mut raw = ptr::null_mut();
+        let outcome = call(|ctx| start(ctx, user_data, &mut raw));
+        self.raw = raw;
+        self.record(outcome)
+    }
 }
 
 #[godot_api]
@@ -61,16 +75,20 @@ impl HegelNativeRun {
     /// Starts the run, freeing any run this object held before.
     #[func]
     fn start(&mut self, settings: Gd<HegelNativeSettings>) -> i64 {
-        call(|ctx| unsafe { c::hegel_run_free(ctx, self.raw) });
-        self.raw = ptr::null_mut();
         let s = settings.bind().raw;
-        let user_data = Arc::as_ptr(&self.output) as *mut c_void;
-        let mut raw = ptr::null_mut();
-        let outcome = call(|ctx| unsafe {
-            c::hegel_run_start(ctx, s, Some(output_trampoline), user_data, &mut raw)
-        });
-        self.raw = raw;
-        self.record(outcome)
+        self.restart(|ctx, user_data, out| unsafe {
+            c::hegel_run_start(ctx, s, Some(output_trampoline), user_data, out)
+        })
+    }
+
+    /// Starts a run replaying `blob`, freeing any run this object held
+    /// before. A run with no failures means the blob didn't reproduce.
+    #[func]
+    fn start_blob(&mut self, settings: Gd<HegelNativeSettings>, blob: GString) -> i64 {
+        let (s, blob) = (settings.bind().raw, blob.to_string());
+        self.restart(|ctx, user_data, out| unsafe {
+            c::hegel_run_start_blob(ctx, s, hstr(&blob), Some(output_trampoline), user_data, out)
+        })
     }
 
     /// The next test case, or null once the run is finished (or on failure).

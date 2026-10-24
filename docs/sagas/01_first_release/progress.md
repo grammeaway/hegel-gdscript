@@ -8,7 +8,7 @@ This is the live log for the plans in `README.md`. There is one row per plan; de
 |---|---|---|---|
 | p1 scaffold | done | `53dfbb1` | `rm -rf .godot && just check` green; 13 native smoke tests; F1 root-caused to Godot #111048 |
 | p2 runner core | done | `5958c47` | 58 tests green; integer quality ported; mutation checks red |
-| p3 report and replay | planned | | |
+| p3 report and replay | done | `fc05e85` | 77 tests green, 9 approved snapshots; mutation checks red; F: gdUnit4 ignores `push_error` by default |
 | p4 runtime errors | planned | | |
 | p5 scalars and combinators | planned | | |
 | p6 collections and text | planned | | |
@@ -45,6 +45,16 @@ Decisions taken during passes, with who took each one (owner or agent) and when.
 | P2.8 | `tc.note` appends to a per-case `_notes` buffer for p3's report; libhegel has no note call we need. | 2026-10-24, agent |
 | P2.9 | Nesting is detected through a static per-thread set in `Hegel`, the only state outside a run. A generator without `_draw` ends the run with a usage error. | 2026-10-24, agent |
 | P2.10 | The quality helpers follow upstream: `minimal` runs with seed 1, `find_any` and `assert_all_examples` derandomized; all disable the database. They only record values from live cases, so a simplest-mode value can't pass for a match. | 2026-10-24, agent |
+| P3.1 | `Hegel.run` and `Hegel.replay` return the result and, on a failure, also `printerr` the report (shortened at quiet verbosity) and raise a one-line `push_error`, so gdUnit4 fails the test. An internal `HegelSettings._silent` turns both off; the quality helpers and the addon's in-process tests set it. | 2026-10-24, owner |
+| P3.2 | A run that ends in an error is loud too: its message goes out through `push_error`, under the same `_silent` switch. | 2026-10-24, owner |
+| P3.3 | A replay whose blob doesn't fail returns `ErrorKind.DID_NOT_REPRODUCE = 7`, a frontend-only kind documented as such. | 2026-10-24, owner |
+| P3.4 | Draw names: `tc.draw(gen, name := "")`. Unnamed draws are `draw_1`, `draw_2`, …; a name shows bare, then as `<name>_<count>`, skipping names already shown. That is Python's `_allocate_display_name` with an explicit name treated as non-repeatable: GDScript can't infer names from the source, so an explicit name plays the part of Python's inferred one. C++ prints a reused bare name bare every time; the plan's rule follows Python. | 2026-10-24, agent |
+| P3.5 | Nothing is recorded after a case's terminal event (later draws or notes), since upstream's body stops at the failure. | 2026-10-24, agent |
+| P3.6 | The report keeps the plan's header (`--- Failure: <key> ---`, unpadded; `--- Failure ---` without a key), counts as the C++ frontend (valid and failing cases up to the first failure; rejected ones before it as discarded), and multi-line notes indent every line. Several failures' reports are joined by a blank line. | 2026-10-24, agent |
+| P3.7 | A replay's failure carries the replayed blob in `failures[i].blob` and its report: the engine gives a replay failure no blob, since the caller holds it. `Hegel.replay("")` is a usage error; other bad blobs are the engine's `E_INVALID_ARG`, reported as usage errors. | 2026-10-24, agent |
+| P3.8 | An errored run goes out through `push_error` alone, as `Hegel run error (<KIND>): <message>`: `push_error` already writes to stderr, so a `printerr` would duplicate it. A failure's `push_error` reads `Hegel: property failed at <origins>; the report is above`. | 2026-10-24, agent |
+| P3.9 | No `hegel_settings_set_test_location`: `get_stack()` gives the call's line, not the test's first line, and the location is only used inside Antithesis, which is out of scope (README item 18). `hegel_test_case_from_blob` wasn't needed either. | 2026-10-24, agent |
+| P3.10 | `_silent` doesn't mute engine output: that follows `verbosity`, and the engine's stale-blob line is useful. | 2026-10-24, agent |
 
 ## Deviations
 
@@ -65,6 +75,14 @@ For each plan: where the work differed from the plan, and why.
 - Also tested beyond the plan: settings start from the profile (`HEGEL_TEST_CASES`, `HEGEL_SEED`, `HEGEL_DATABASE`), suppressed health checks, invalid settings and draws as usage errors, the check origin's exact line.
 - Mutation checks: simplest mode calling the engine turns `test_draws_after_a_terminal_event_are_simplest_values` red; last event wins turns `test_failed_check_then_assume_stays_a_failure` and `test_failed_assume_then_check_stays_rejected` red; `minimal` keeping its first match turns 8 quality tests red.
 
+**p3**
+
+- Two p2 tests read internals the report replaced (`_failure_message`, `_notes`). They now assert the same behaviour through `result.report`: `test_report_shows_the_first_failed_check` and `test_notes_are_in_the_report_in_order`. They weren't wrong; their fields were removed.
+- Snapshot subjects share a base, `tests/support/subject.gd`, with seeded settings and the common `x < 10` body. Beyond the plan's list there are `verbose` and `run_error` (P3.2) subjects. The stale-blob subject overruns (step 5), so it shows the engine's line on where the replay left the recording. A fixed-body stale blob is tested in-process.
+- Not tested: the caveat line. It needs a nondeterministic failure the engine confirms, which can't be made reliable in a test.
+- Mutation checks: `var ` to `let ` turns 7 report tests and the snapshot test red, writing 6 `.received.txt` files; dropping the database key turns `test_database_replays_a_stored_failure_first` red (plus the header test and snapshots); keeping the first capture instead of the newest stamped one turns 11 tests red; ignoring `_silent` turns the snapshot test red (the replay subjects' setup runs print).
+- Completion check "replay fails with the same report body, and passes, with the stale-blob error, once fixed": `test_replay_reproduces_the_report_body`, `test_replay_of_a_fixed_failure_did_not_reproduce`, and the `replay` / `stale_blob` snapshots.
+
 ## Found
 
 Bugs or debts found during a pass and kept out of its diff.
@@ -73,3 +91,5 @@ Bugs or debts found during a pass and kept out of its diff.
 - **p1:** `/tmp/hegel` is checked out at `5195b0b` (as planned), not at the `libhegel/0.48.0` tag (`ef54eff`). `libhegel/` is identical between the two; only the frontends moved on (the Java import, and the C++ frontend's nix flake). Fine for reading semantics, but the tag is the strict reference.
 - **p2:** `hegel_settings_get_seed` rejects a NULL out-parameter for either output, so the native `get_seed` / `has_seed` each pass a scratch variable for the other.
 - **p2, for p3:** with the default verbosity a failing run printed nothing through `drain_output` in these tests; p3's report shouldn't count on engine output.
+- **p3, for the owner (affects P3.1):** F7 is only half right. gdUnit4 6.2.2 reports script errors as failures, but `push_error` only when `gdunit4/settings/report/godot/push_error` is on, and it defaults to off (`GdUnitSettings.gd:137`). Confirmed: with `_silent` ignored, 171 `push_error`s left the in-process suites green. So by default a gdUnit4 user sees the report and error, but the test doesn't fail on its own; they still need `assert_bool(result.passed).is_true()`. Options: document that setting (p8), or a gdUnit4-specific assert helper. p4's Logger capture doesn't change this. `AGENTS.md` now states it correctly.
+- **p3:** under `_silent`, engine output (such as the stale-blob line) still reaches stderr during the addon's tests. It's harmless noise (P3.10).
