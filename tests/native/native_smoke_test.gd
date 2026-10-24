@@ -120,6 +120,23 @@ func test_bad_call_records_result_and_message() -> void:
 	tc.mark_complete(HegelNativeTestCase.STATUS_VALID, "")
 
 
+func test_float_and_boolean_draws() -> void:
+	var run := HegelNativeRun.new()
+	run.start(_settings(SEED))
+	var tc := run.next_test_case()
+	var x := tc.generate_float(1.0, 2.0, false, false, false, false)
+	assert_int(tc.last_result).is_equal(HegelNative.OK)
+	assert_float(x).is_between(1.0, 2.0)
+	tc.generate_boolean(0.5)
+	assert_int(tc.last_result).is_equal(HegelNative.OK)
+	assert_bool(tc.generate_boolean(1.0)).is_true()
+	tc.generate_float(2.0, 1.0, false, false, false, false)
+	assert_int(tc.last_result).is_equal(HegelNative.E_INVALID_ARG)
+	tc.generate_boolean(1.5)
+	assert_int(tc.last_result).is_equal(HegelNative.E_INVALID_ARG)
+	tc.mark_complete(HegelNativeTestCase.STATUS_VALID, "")
+
+
 func test_out_of_range_arguments_are_rejected() -> void:
 	var settings := HegelNativeSettings.new()
 	assert_int(settings.set_test_cases(-1)).is_equal(HegelNative.E_INVALID_ARG)

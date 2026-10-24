@@ -80,6 +80,24 @@ static func _first_match(
 	return found.back() if found else null
 
 
+## The message of the usage error that drawing from [param gen] ends a run
+## with, after failing the current test if it ends otherwise.
+static func usage_error(gen: HegelGenerator) -> String:
+	var result := Hegel.run(func(tc: HegelTestCase) -> void: tc.draw(gen), _settings(10))
+	(
+		GdUnitTestSuite
+		. assert_bool(result.error_kind == HegelResult.ErrorKind.USAGE and result.failures.is_empty())
+		. override_failure_message(
+			(
+				"expected a usage error, got kind %d (%s), %d failures"
+				% [result.error_kind, result.error, result.failures.size()]
+			)
+		)
+		. is_true()
+	)
+	return result.error
+
+
 ## Whether the case is still running: once it has ended, draws return
 ## simplest values that the helpers mustn't record.
 static func _live(tc: HegelTestCase) -> bool:

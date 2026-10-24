@@ -59,6 +59,49 @@ impl HegelNativeTestCase {
         out
     }
 
+    /// A 64-bit float, as GDScript's are, with no limit on small nonzero
+    /// magnitudes; 0.0 on failure.
+    #[func]
+    fn generate_float(
+        &mut self,
+        min_value: f64,
+        max_value: f64,
+        allow_nan: bool,
+        allow_infinity: bool,
+        exclude_min: bool,
+        exclude_max: bool,
+    ) -> f64 {
+        let tc = self.raw;
+        let mut out = 0.0f64;
+        self.record(call(|ctx| unsafe {
+            c::hegel_generate_float(
+                ctx,
+                tc,
+                64,
+                min_value,
+                max_value,
+                allow_nan,
+                allow_infinity,
+                exclude_min,
+                exclude_max,
+                f64::from_bits(1),
+                &mut out,
+            )
+        }));
+        out
+    }
+
+    /// `true` with probability `p`, unforced; false on failure.
+    #[func]
+    fn generate_boolean(&mut self, p: f64) -> bool {
+        let tc = self.raw;
+        let mut out = false;
+        self.record(call(|ctx| unsafe {
+            c::hegel_generate_boolean(ctx, tc, p, false, false, &mut out)
+        }));
+        out
+    }
+
     /// `label` is a u64 bit-cast to int, from `HegelNative.label_*`.
     #[func]
     fn start_span(&mut self, label: i64) -> i64 {

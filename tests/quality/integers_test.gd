@@ -134,3 +134,9 @@ func test_minimal_from_101_is_101() -> void:
 
 func test_all_examples_are_in_bounds() -> void:
 	Q.assert_all_examples(Gs.integers(-5, 5), func(x: int) -> bool: return x >= -5 and x <= 5)
+
+
+# ShrinkIntegers.MinimizeBoundedIntegersToPositive
+func test_minimize_bounded_integers_to_positive() -> void:
+	var nonzero := Gs.integers(-10, 10).filter(func(x: int) -> bool: return x != 0)
+	assert_int(Q.minimal(nonzero, _any)).is_equal(1)

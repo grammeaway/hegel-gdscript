@@ -172,6 +172,48 @@ func _draw_integer(min_value: int, max_value: int) -> int:
 	return value
 
 
+func _draw_float(
+	min_value: float,
+	max_value: float,
+	allow_nan: bool,
+	allow_infinity: bool,
+	exclude_min: bool,
+	exclude_max: bool
+) -> float:
+	if not _ended:
+		var value := _native.generate_float(
+			min_value, max_value, allow_nan, allow_infinity, exclude_min, exclude_max
+		)
+		if _call_ok("generate_float"):
+			return value
+	var low := _next_up(min_value) if exclude_min else min_value
+	var high := -_next_up(-max_value) if exclude_max else max_value
+	return clampf(0.0, low, high)
+
+
+func _draw_boolean() -> bool:
+	if _ended:
+		return false
+	var value := _native.generate_boolean(0.5)
+	return value if _call_ok("generate_boolean") else false
+
+
+## The smallest float above [param x], as the engine steps an excluded bound.
+static func _next_up(x: float) -> float:
+	if is_nan(x) or x == INF:
+		return x
+	var bytes := PackedByteArray()
+	bytes.resize(8)
+	# -0.0 steps up as 0.0 does. GDScript can't write the result as a literal:
+	# it parses subnormal literals as 0.0.
+	bytes.encode_double(0, 0.0 if x == 0.0 else x)
+	# Read as a signed int, a positive float's bits grow with it, and a
+	# negative float's shrink as it grows.
+	var bits := bytes.decode_s64(0)
+	bytes.encode_s64(0, bits + 1 if bits >= 0 else bits - 1)
+	return bytes.decode_double(0)
+
+
 func _start_span(label: int) -> void:
 	if not _ended:
 		_native.start_span(label)

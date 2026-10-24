@@ -29,11 +29,11 @@ Each generator below follows its counterpart in `frontends/python/python/hegel/g
 
 ## Completion
 
-- [ ] `just check` is green.
-- [ ] `minimal(floats(), x > 1.0)` returns `2.0` and `minimal(floats(), x > 0.0)` returns `1.0`, as in `ShrinkFloats.ShrinksToSimpleFloatAbove1` / `Above0`. If the engine shrinks elsewhere, that's an engine divergence: record it under Found and ask.
-- [ ] Dropping the `filter.attempt` span's `discard = true` turns a filter quality test red. Check this, then restore it. If no ported test notices, record that.
-- [ ] Making `one_of` draw its index without a span turns a quality or contract test red, or a recorded note explains why upstream's tests don't pin it.
-- [ ] Every generator has a validation test that ends in a usage error.
+- [x] `just check` is green.
+- [x] `minimal(floats(), x > 1.0)` returns `2.0` and `minimal(floats(), x > 0.0)` returns `1.0`, as in `ShrinkFloats.ShrinksToSimpleFloatAbove1` / `Above0`. If the engine shrinks elsewhere, that's an engine divergence: record it under Found and ask.
+- [x] Dropping the `filter.attempt` span's `discard = true` turns a filter quality test red. Check this, then restore it. If no ported test notices, record that. (No test notices: recorded under Found.)
+- [x] Making `one_of` draw its index without a span turns a quality or contract test red, or a recorded note explains why upstream's tests don't pin it. (Not pinned: recorded under Found.)
+- [x] Every generator has a validation test that ends in a usage error. (`booleans` and `just` take no arguments that can be invalid.)
 
 ## Non-goals
 
