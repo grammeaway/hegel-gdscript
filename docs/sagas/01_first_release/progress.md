@@ -9,7 +9,7 @@ This is the live log for the plans in `README.md`. There is one row per plan; de
 | p1 scaffold | done | `53dfbb1` | `rm -rf .godot && just check` green; 13 native smoke tests; F1 root-caused to Godot #111048 |
 | p2 runner core | done | `5958c47` | 58 tests green; integer quality ported; mutation checks red |
 | p3 report and replay | done | `fc05e85` | 77 tests green, 9 approved snapshots; mutation checks red; F: gdUnit4 ignores `push_error` by default |
-| p4 runtime errors | planned | | |
+| p4 runtime errors | done | `4da25ff` | 89 tests green, 10 approved snapshots; mutation checks red; adds `report_multiple_failures` (P4.1) |
 | p5 scalars and combinators | planned | | |
 | p6 collections and text | planned | | |
 | p7 state machines | planned | | |
@@ -55,6 +55,13 @@ Decisions taken during passes, with who took each one (owner or agent) and when.
 | P3.8 | An errored run goes out through `push_error` alone, as `Hegel run error (<KIND>): <message>`: `push_error` already writes to stderr, so a `printerr` would duplicate it. A failure's `push_error` reads `Hegel: property failed at <origins>; the report is above`. | 2026-10-24, agent |
 | P3.9 | No `hegel_settings_set_test_location`: `get_stack()` gives the call's line, not the test's first line, and the location is only used inside Antithesis, which is out of scope (README item 18). `hegel_test_case_from_blob` wasn't needed either. | 2026-10-24, agent |
 | P3.10 | `_silent` doesn't mute engine output: that follows `verbosity`, and the engine's stale-blob line is useful. | 2026-10-24, agent |
+| P4.1 | Add `HegelSettings.report_multiple_failures` (read from the engine profile, default false; native get/set), as Python and C++ do. Asked because with it off, the engine merges every origin and reports only the smallest failure, so the planned "two error sites, two origins" test can't be seen in one run (p3 had deferred the setting). | 2026-10-24, owner |
+| P4.2 | Origins are `script error: <file>:<line>` and `error: <file>:<line>`, in the style of `check: <file>:<line>`. The report line starts `Script error:` or `Error:`, after Godot's own `SCRIPT ERROR` / `ERROR`, rather than the plan's `Error:` for both. | 2026-10-24, agent |
+| P4.3 | The location is the innermost backtrace frame outside the addon's directory, as Python's `_user_location`, so an error the addon raises on misuse (say `tc.draw(null)`) points at the user's line. Every frame the addon's: the innermost. No backtrace (a release build): Godot's `file`/`line` arguments. | 2026-10-24, agent |
+| P4.4 | The report's frames are the backtrace's, innermost first, down to the frame in `hegel.gd` that called the body, as `  at <function> (<file>:<line>)`. They show even when there is one. The message is Godot's `rationale` when it has one, else `code`: engine errors such as `get_node` keep the useful text in `rationale`. | 2026-10-24, agent |
+| P4.5 | Thread safety: `HegelTestCase._end` takes a per-case `Mutex` and returns whether it was the first event; the capture guards its current case with its own `Mutex`, and always takes its own first. Errors from any thread count against the running body; concurrent runs on several threads would see each other's errors, a `shortcut:` in `error_capture.gd`. | 2026-10-24, agent |
+| P4.6 | `error_capture.gd` calls `tc._fail_with_error`, so only `test_case.gd` names the status constant, keeping the rule that four scripts touch native classes. `hegel.gd` preloads it as `_ErrorCapture`, with a `gdlint: ignore=load-constant-name`: a leading underscore keeps it out of the docs, and gdlint's preload rule forbids one. | 2026-10-24, agent |
+| P4.7 | Error scenarios live in `tests/support/error_scenarios.gd`, one function each, chosen by the first user argument; each prints its outcome as a JSON line. `Subprocess.run` takes user arguments, and its scrubber now keeps `at: <function> (res://…)` script locations, scrubbing only Godot's source paths. | 2026-10-24, agent |
 
 ## Deviations
 
@@ -83,6 +90,17 @@ For each plan: where the work differed from the plan, and why.
 - Mutation checks: `var ` to `let ` turns 7 report tests and the snapshot test red, writing 6 `.received.txt` files; dropping the database key turns `test_database_replays_a_stored_failure_first` red (plus the header test and snapshots); keeping the first capture instead of the newest stamped one turns 11 tests red; ignoring `_silent` turns the snapshot test red (the replay subjects' setup runs print).
 - Completion check "replay fails with the same report body, and passes, with the stale-blob error, once fixed": `test_replay_reproduces_the_report_body`, `test_replay_of_a_fixed_failure_did_not_reproduce`, and the `replay` / `stale_blob` snapshots.
 
+**p4**
+
+- The report line's label follows the error type (P4.2), not `Error:` for all.
+- `report_multiple_failures` joins the API (P4.1). `test_multiple_failures_are_each_shrunk_and_reported` (report_test) covers it with checks, and it is false in the profile test. The two-sites and same-site scenarios turn it on; in the same-site one, values in the origin would show as several failures. With it off, the engine shrinks across origins: a probe failing at site A for `x >= 10` and site B for `x >= 1` reported B with `x = 1`.
+- Beyond the plan: a failed check before an error wins, and an error before a failed check wins; Godot's script locations survive scrubbing.
+- "An error between runs isn't captured" keeps the last case of a passing run and checks a later `push_error` leaves it unended, as a capture left attached would end it.
+- Thread case (step 3): it works. Godot calls the logger on the erroring thread, with that thread's own backtrace, so the origin and frames are in the thread's function, and the body's frames don't appear.
+- Not tested: an error after a stop-test stays OVERRUN. Stop-test can't be provoked on purpose; the first-event rule it relies on is tested through checks.
+- Mutation checks: dropping `ERROR_TYPE_ERROR` from the policy turns the `push_error`, two-sites and error-before-check tests red; putting the message into the origin turns every origin assertion red, and the same-site test on its failure count too; leaving the capture attached and the logger added turns the between-runs test red; not passing `report_multiple_failures` to the engine turns the multiple-failures report test red.
+- Completion check "a runtime-error-only property shrinks": the `runtime_error` snapshot (`a[x] = 1` on `[0]`, `x` from `integers(0, 100)`) reports `var draw_1 = 1`, with Godot's 14 printed repeats above it (F2).
+
 ## Found
 
 Bugs or debts found during a pass and kept out of its diff.
@@ -93,3 +111,4 @@ Bugs or debts found during a pass and kept out of its diff.
 - **p2, for p3:** with the default verbosity a failing run printed nothing through `drain_output` in these tests; p3's report shouldn't count on engine output.
 - **p3, for the owner (affects P3.1):** F7 is only half right. gdUnit4 6.2.2 reports script errors as failures, but `push_error` only when `gdunit4/settings/report/godot/push_error` is on, and it defaults to off (`GdUnitSettings.gd:137`). Confirmed: with `_silent` ignored, 171 `push_error`s left the in-process suites green. So by default a gdUnit4 user sees the report and error, but the test doesn't fail on its own; they still need `assert_bool(result.passed).is_true()`. Options: document that setting (p8), or a gdUnit4-specific assert helper. p4's Logger capture doesn't change this. `AGENTS.md` now states it correctly.
 - **p3:** under `_silent`, engine output (such as the stale-blob line) still reaches stderr during the addon's tests. It's harmless noise (P3.10).
+- **p4, for p8:** user docs should cover: Godot prints every repeat of an error while shrinking (F2, now in `AGENTS.md` Gotchas); `report_multiple_failures` to see distinct error sites separately; `assert()` runs only in debug builds, so it can't fail a case in a release export; and under gdUnit4, a script error in the body is also reported by gdUnit4's logger (F7), likely once per repeat (unchecked), so the test fails with many entries besides Hegel's report.

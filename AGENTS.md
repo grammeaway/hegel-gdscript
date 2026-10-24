@@ -27,6 +27,7 @@ addons/gdUnit4/      vendored test framework, dev-only
 rust/                the gdext crate over libhegel (`hegeltest-c`, linked statically)
 tests/               gdUnit4 suites, mirroring addons/hegel/; tests/native/ drives the native classes
   subjects/          one-scenario SceneTree scripts, run in a fresh process by report_snapshot_test.gd
+  support/           helpers; error_scenarios.gd holds error_capture_test.gd's scenarios
   approvals/         each subject's approved, scrubbed output
 docs/sagas/          plans and their progress logs
 ```
@@ -45,7 +46,8 @@ docs/sagas/          plans and their progress logs
 
 - **Run loop** (`Hegel.run`, and `Hegel.replay` through `start_blob`): `next_test_case`, `body.call(tc)`, `mark_complete` with the case's status, draining engine output after each engine step; then the run result becomes a `HegelResult`. A nested run returns a usage error. The database key is `<script>::<function>` of `run`'s caller, from `get_stack()`.
 - **Report.** A case records draw lines and notes when the engine stamps it (`should_capture`, not at quiet verbosity) or the run is verbose. Captures are kept per origin, ranked as upstream's Python `_Captured`, and each failure's report is built from its origin's capture. Unless `settings._silent`, a failure prints its report with `printerr` plus a one-line `push_error`, and an error goes through `push_error`; the addon's own in-process tests set `_silent`.
-- **Terminal events.** A case ends at its first failed `check` (INTERESTING, origin `check: source:line`), failed `assume` (INVALID), or engine stop-test (OVERRUN). Later events change nothing. An engine error that isn't stop-test or assume ends the run with a usage or internal error, never a counterexample.
+- **Terminal events.** A case ends at its first failed `check` (INTERESTING, origin `check: source:line`), runtime error (INTERESTING, see below), failed `assume` (INVALID), or engine stop-test (OVERRUN). Later events change nothing. `_end` takes a lock, since an error can arrive from another thread. An engine error that isn't stop-test or assume ends the run with a usage or internal error, never a counterexample.
+- **Runtime errors.** `error_capture.gd`, a `Logger`, is added for each run and points at the case whose body is running. A script error or an error (`push_error`, engine errors) ends that case, from any thread; warnings don't. The origin is `script error: file:line` or `error: file:line` of the innermost backtrace frame outside the addon, never the message, which carries values. The report line is the message and location, then the backtrace's frames down to the runner.
 - **Simplest mode.** Once a case has ended, primitives return their simplest value without calling the engine, so the body can run on or return early. GDScript has no exceptions to unwind it.
 - `HegelSettings.new()` reads the engine's resolved profile (`HEGEL_*` env, `ci`), and the run sets every field on a fresh native handle. The database defaults to `user://hegel/` only where the profile leaves it at the engine default.
 - Generator factories live on `HegelGenerators` (`generators.gd`); each generator is a `HegelGenerator` with a span `label` from `hegel-gdscript.<kind>`. Tests and docs alias it as `const Gs := preload("res://addons/hegel/generators.gd")`.
@@ -66,9 +68,10 @@ docs/sagas/          plans and their progress logs
 - Seed or derandomize every run, and disable the database, unless the test is about the database.
 - There is no GDScript coverage tool, so prove each new test can fail: break the behaviour, watch it go red, restore it.
 - `tests/support/quality.gd` holds upstream's `minimal`, `find_any` and `assert_all_examples`; `tests/quality/` ports upstream's shrink and find quality tests per generator.
-- gdUnit4 adds its own `Logger` and reports script errors during a test as failures; `push_error` only when `gdunit4/settings/report/godot/push_error` is on (off by default). A test that provokes an error on purpose has to account for that.
+- gdUnit4 adds its own `Logger` and reports script errors during a test as failures; `push_error` only when `gdunit4/settings/report/godot/push_error` is on (off by default). So a scenario that provokes an error on purpose always runs in a fresh process: add it to `tests/support/error_scenarios.gd`, or to `tests/subjects/` for a snapshot.
 - **Snapshot tests.** `tests/report_snapshot_test.gd` runs every script in `tests/subjects/` with `tests/support/subprocess.gd`, which scrubs the banner, blobs, absolute paths, Godot source locations and the addon's line numbers. A mismatch writes `tests/approvals/<name>.received.txt` (gitignored). Read it; to accept it, rename it over `<name>.approved.txt`.
 
 ## Gotchas
 
+- **Error noise.** Godot prints every error to stderr, including each repeat while the engine shrinks an error-caused failure. It's noise, not more failures. It can't be muted while a `Logger` still sees the errors: `Engine.print_error_messages = false` silences both.
 - **Cold-import crash.** A `godot --headless --import` with no `.godot/` can segfault on exit (exit 134) once the project has a GDExtension. It's a Godot race between GDExtension doc generation and editor shutdown ([#111048](https://github.com/godotengine/godot/issues/111048)). The import finishes first, so `just import` retries once, warm, and the retry must succeed.

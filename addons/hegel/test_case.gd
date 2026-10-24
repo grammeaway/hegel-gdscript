@@ -4,7 +4,8 @@ extends RefCounted
 ## rejects the case through.
 ##
 ## [method Hegel.run] passes one to the body per test case. A case ends at its
-## first failed [method check], failed [method assume], or when the engine
+## first failed [method check], runtime error (a script error or
+## [method @GlobalScope.push_error]), failed [method assume], or when the engine
 ## abandons it. From then on, draws return each generator's simplest value
 ## without generating anything, so the body can return early:
 ## [codeblock]
@@ -16,6 +17,8 @@ extends RefCounted
 const _LABEL_PREFIX := "hegel-gdscript."
 
 var _native: HegelNativeTestCase
+## Guards [method _end]: an error can end the case from another thread.
+var _lock := Mutex.new()
 ## Whether the case has had its terminal event; see [method _end].
 var _ended := false
 var _status := HegelNativeTestCase.STATUS_VALID
@@ -74,11 +77,10 @@ func assume(condition: bool) -> bool:
 func check(condition: bool, message := "") -> bool:
 	if not condition and not _ended:
 		var location := _caller_location()
-		_end(HegelNativeTestCase.STATUS_INTERESTING, "check: " + location)
-		_failure = (
-			"Check failed: %s (%s)" % [message, location]
-			if message
-			else "Check failed (%s)" % location
+		_end(
+			HegelNativeTestCase.STATUS_INTERESTING,
+			"check: " + location,
+			"Check failed: %s (%s)" % [message, location] if message else "Check failed (%s)" % location
 		)
 	return condition
 
@@ -118,22 +120,30 @@ func _display_name(name: String) -> String:
 	return shown
 
 
-## Marks the case's terminal event. Only the first one counts.
-func _end(status: int, origin: String) -> void:
-	if _ended:
-		return
-	_ended = true
-	_status = status
-	_origin = origin
+## Marks the case's terminal event, with [param failure] as its report line,
+## and returns whether it was the first: only that one counts.
+func _end(status: int, origin: String, failure := "") -> bool:
+	_lock.lock()
+	var first := not _ended
+	if first:
+		_ended = true
+		_status = status
+		_origin = origin
+		_failure = failure
+	_lock.unlock()
+	return first
+
+
+## Fails the case for a runtime error, as its terminal event.
+func _fail_with_error(origin: String, failure: String) -> void:
+	_end(HegelNativeTestCase.STATUS_INTERESTING, origin, failure)
 
 
 ## Ends the case, and the run with it, with an error rather than a verdict.
 func _fail_run(kind: HegelResult.ErrorKind, message: String) -> void:
-	if _ended:
-		return
-	_end(HegelNativeTestCase.STATUS_INVALID, "")
-	_run_error_kind = kind
-	_run_error = message
+	if _end(HegelNativeTestCase.STATUS_INVALID, ""):
+		_run_error_kind = kind
+		_run_error = message
 
 
 ## The [code]source:line[/code] of the code calling the caller of this function.

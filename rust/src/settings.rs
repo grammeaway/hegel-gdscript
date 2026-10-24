@@ -91,6 +91,14 @@ impl HegelNativeSettings {
         }))
     }
 
+    #[func]
+    fn set_report_multiple_failures(&mut self, yes: bool) -> i64 {
+        let s = self.raw;
+        self.record(call(|ctx| unsafe {
+            c::hegel_settings_set_report_multiple_failures(ctx, s, yes)
+        }))
+    }
+
     /// The database root directory, or "" to disable the database.
     #[func]
     fn set_database(&mut self, path: GString) -> i64 {
@@ -171,6 +179,16 @@ impl HegelNativeSettings {
         let mut out = false;
         self.record(call(|ctx| unsafe {
             c::hegel_settings_get_derandomize(ctx, s, &mut out)
+        }));
+        out
+    }
+
+    #[func]
+    fn get_report_multiple_failures(&mut self) -> bool {
+        let s = self.raw;
+        let mut out = false;
+        self.record(call(|ctx| unsafe {
+            c::hegel_settings_get_report_multiple_failures(ctx, s, &mut out)
         }));
         out
     }

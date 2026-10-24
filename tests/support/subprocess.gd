@@ -5,7 +5,7 @@ extends RefCounted
 ## Regex and replacement pairs for [method scrub].
 const _PATTERNS := [
 	['Hegel\\.replay\\("[^"]+"', 'Hegel.replay("[blob]"'],
-	["at: (\\w+) \\([^)]*\\)", "at: $1 ([godot])"],
+	["at: (\\w+) \\((?!res://)[^)]*\\)", "at: $1 ([godot])"],
 	["(res://addons/hegel/[\\w/]+\\.gd):\\d+", "$1"],
 ]
 
@@ -18,13 +18,14 @@ class Outcome:
 
 
 ## Runs [param script] headless in this project, and scrubs its output.
-static func run(script: String) -> Outcome:
+## [param user_args] reach the script through [method OS.get_cmdline_user_args].
+static func run(script: String, user_args: PackedStringArray = []) -> Outcome:
 	var project := ProjectSettings.globalize_path("res://")
+	var args: PackedStringArray = ["--headless", "--path", project, "-s", script, "--"]
+	args.append_array(user_args)
 	var output := []
 	var outcome := Outcome.new()
-	outcome.exit_code = OS.execute(
-		OS.get_executable_path(), ["--headless", "--path", project, "-s", script], output, true
-	)
+	outcome.exit_code = OS.execute(OS.get_executable_path(), args, output, true)
 	outcome.output = scrub("".join(output))
 	return outcome
 

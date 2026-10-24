@@ -29,10 +29,10 @@ GDScript has no exceptions. A runtime error in the code under test (calling a me
 
 ## Completion
 
-- [ ] `just check` is green.
-- [ ] Removing `ERROR_TYPE_ERROR` from the policy turns the `push_error` test red. Check this, then restore it.
-- [ ] Putting the message into the origin turns the "same site, different values, one origin" test red. Check this, then restore it.
-- [ ] A subject whose property fails only through a runtime error shrinks it: for example `var a := [0]; a[x]` with `x` from `integers(0, 100)` reports `var draw_1 = 1`.
+- [x] `just check` is green.
+- [x] Removing `ERROR_TYPE_ERROR` from the policy turns the `push_error` test red. Check this, then restore it.
+- [x] Putting the message into the origin turns the "same site, different values, one origin" test red. Check this, then restore it.
+- [x] A subject whose property fails only through a runtime error shrinks it: for example `var a := [0]; a[x]` with `x` from `integers(0, 100)` reports `var draw_1 = 1`.
 
 ## Non-goals
 

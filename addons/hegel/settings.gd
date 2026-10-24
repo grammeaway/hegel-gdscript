@@ -40,6 +40,10 @@ var seed: int
 var has_seed: bool
 ## Derive a fixed seed from the test, so every run of it is the same.
 var derandomize: bool
+## Keep looking for failures after the first, and report each distinct one:
+## failures in different places in the code are different bugs. When false,
+## only the smallest failure found is shrunk and reported.
+var report_multiple_failures: bool
 ## The directory failing examples are saved to and replayed from, as a
 ## [code]user://[/code], [code]res://[/code] or absolute path. [code]""[/code]
 ## disables the database.
@@ -58,6 +62,7 @@ func _init() -> void:
 	seed = native.get_seed()
 	has_seed = native.has_seed()
 	derandomize = native.get_derandomize()
+	report_multiple_failures = native.get_report_multiple_failures()
 	var engine_database: Variant = native.get_database()
 	database = DEFAULT_DATABASE if engine_database == null else engine_database
 	verbosity = native.get_verbosity() as Verbosity
@@ -76,6 +81,7 @@ func _to_native(database_key: String) -> HegelNativeSettings:
 		native.set_test_cases.bind(test_cases),
 		native.set_seed.bind(seed, has_seed),
 		native.set_derandomize.bind(derandomize),
+		native.set_report_multiple_failures.bind(report_multiple_failures),
 		native.set_database.bind(path),
 		native.set_database_key.bind(database_key),
 		native.set_verbosity.bind(verbosity),

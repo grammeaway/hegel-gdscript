@@ -88,6 +88,26 @@ func test_discarded_cases_before_the_failure_are_counted() -> void:
 	assert_array(Array(_body_lines(result))).has_size(1)
 
 
+func test_multiple_failures_are_each_shrunk_and_reported() -> void:
+	var settings := _settings()
+	settings.report_multiple_failures = true
+	var result := Hegel.run(_fails_low_and_high, settings)
+	assert_int(result.failures.size()).is_equal(2)
+	var reports := result.report.split("\n\n--- Failure")
+	assert_array(Array(reports)).has_size(2)
+	assert_str(result.report).contains("  var draw_1 = 10\n").contains("  var draw_1 = 60\n")
+	settings.report_multiple_failures = false
+	assert_int(Hegel.run(_fails_low_and_high, settings).failures.size()).is_equal(1)
+
+
+func _fails_low_and_high(tc: HegelTestCase) -> void:
+	var x: int = tc.draw(Gs.integers(0, 100))
+	if x < 50:
+		tc.check(x < 10, "low")
+	else:
+		tc.check(x < 60, "high")
+
+
 func test_unnamed_draws_are_numbered() -> void:
 	var result := Hegel.run(
 		func(tc: HegelTestCase) -> void:

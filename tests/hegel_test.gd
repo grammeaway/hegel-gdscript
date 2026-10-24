@@ -106,6 +106,7 @@ func test_settings_start_from_the_engine_profile() -> void:
 	assert_int(settings.seed).is_equal(7)
 	assert_bool(settings.has_seed).is_true()
 	assert_bool(settings.derandomize).is_false()
+	assert_bool(settings.report_multiple_failures).is_false()
 	assert_str(settings.database).is_equal(HegelSettings.DEFAULT_DATABASE)
 	assert_int(settings.verbosity).is_equal(HegelSettings.Verbosity.NORMAL)
 	assert_int(settings.suppress_health_checks).is_equal(0)

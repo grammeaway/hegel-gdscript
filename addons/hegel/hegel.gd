@@ -14,6 +14,8 @@ extends RefCounted
 ##     assert_bool(result.passed).is_true()
 ## [/codeblock]
 
+# gdlint: ignore=load-constant-name
+const _ErrorCapture := preload("error_capture.gd")
 const _STALE_BLOB := (
 	"Hegel.replay: the blob did not reproduce a failure. The failure may have been"
 	+ " fixed, or, for a nondeterministic blob, it may not have recurred within the"
@@ -43,8 +45,10 @@ class _Capture:
 
 ## Runs [param body] as a property test: once per test case, each time with a
 ## fresh [HegelTestCase] to draw values from. A case fails at a failed
-## [method HegelTestCase.check], and the engine then shrinks it to a minimal
-## failing case. [param settings] defaults to [code]HegelSettings.new()[/code].
+## [method HegelTestCase.check] or a runtime error: a script error or a
+## [method @GlobalScope.push_error], from the body's thread or a thread it
+## started. The engine then shrinks it to a minimal failing case.
+## [param settings] defaults to [code]HegelSettings.new()[/code].
 ## [br][br]
 ## On a failure, the report ([member HegelResult.report]) is printed to stderr
 ## and a one-line error is pushed, so a test framework that watches errors,
@@ -96,7 +100,10 @@ static func _guarded(
 			),
 			resolved
 		)
-	var result := _drive(body, resolved, blob, key)
+	var errors := _ErrorCapture.new()
+	OS.add_logger(errors)
+	var result := _drive(body, resolved, blob, key, errors)
+	OS.remove_logger(errors)
 	_lock.lock()
 	_running.erase(thread)
 	_lock.unlock()
@@ -104,7 +111,7 @@ static func _guarded(
 
 
 static func _drive(
-	body: Callable, settings: HegelSettings, blob: String, key: String
+	body: Callable, settings: HegelSettings, blob: String, key: String, errors: _ErrorCapture
 ) -> HegelResult:
 	if not body.is_valid():
 		return HegelResult._errored(HegelResult.ErrorKind.USAGE, "Hegel.run needs a valid Callable")
@@ -134,7 +141,9 @@ static func _drive(
 		var tc := HegelTestCase.new(
 			native_tc, (stamped and not quiet) or verbose, verbose and not settings._silent
 		)
+		errors.capture_into(tc)
 		body.call(tc)
+		errors.capture_into(null)
 		test_cases += 1
 		if tc._run_error_kind != HegelResult.ErrorKind.NONE:
 			return HegelResult._errored(tc._run_error_kind, tc._run_error, test_cases)

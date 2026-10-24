@@ -1,0 +1,142 @@
+SCRIPT ERROR: Invalid assignment of index '55' (on base: 'Array') with value of type 'int'.
+          at: _out_of_bounds (res://tests/subjects/runtime_error.gd:11)
+          GDScript backtrace (most recent call first):
+              [0] _out_of_bounds (res://tests/subjects/runtime_error.gd:11)
+              [1] _drive (res://addons/hegel/hegel.gd)
+              [2] _guarded (res://addons/hegel/hegel.gd)
+              [3] run (res://addons/hegel/hegel.gd)
+              [4] _run (res://tests/subjects/runtime_error.gd:5)
+              [5] _initialize (res://tests/support/subject.gd:9)
+SCRIPT ERROR: Invalid assignment of index '55' (on base: 'Array') with value of type 'int'.
+          at: _out_of_bounds (res://tests/subjects/runtime_error.gd:11)
+          GDScript backtrace (most recent call first):
+              [0] _out_of_bounds (res://tests/subjects/runtime_error.gd:11)
+              [1] _drive (res://addons/hegel/hegel.gd)
+              [2] _guarded (res://addons/hegel/hegel.gd)
+              [3] run (res://addons/hegel/hegel.gd)
+              [4] _run (res://tests/subjects/runtime_error.gd:5)
+              [5] _initialize (res://tests/support/subject.gd:9)
+SCRIPT ERROR: Invalid assignment of index '55' (on base: 'Array') with value of type 'int'.
+          at: _out_of_bounds (res://tests/subjects/runtime_error.gd:11)
+          GDScript backtrace (most recent call first):
+              [0] _out_of_bounds (res://tests/subjects/runtime_error.gd:11)
+              [1] _drive (res://addons/hegel/hegel.gd)
+              [2] _guarded (res://addons/hegel/hegel.gd)
+              [3] run (res://addons/hegel/hegel.gd)
+              [4] _run (res://tests/subjects/runtime_error.gd:5)
+              [5] _initialize (res://tests/support/subject.gd:9)
+SCRIPT ERROR: Invalid assignment of index '55' (on base: 'Array') with value of type 'int'.
+          at: _out_of_bounds (res://tests/subjects/runtime_error.gd:11)
+          GDScript backtrace (most recent call first):
+              [0] _out_of_bounds (res://tests/subjects/runtime_error.gd:11)
+              [1] _drive (res://addons/hegel/hegel.gd)
+              [2] _guarded (res://addons/hegel/hegel.gd)
+              [3] run (res://addons/hegel/hegel.gd)
+              [4] _run (res://tests/subjects/runtime_error.gd:5)
+              [5] _initialize (res://tests/support/subject.gd:9)
+SCRIPT ERROR: Invalid assignment of index '55' (on base: 'Array') with value of type 'int'.
+          at: _out_of_bounds (res://tests/subjects/runtime_error.gd:11)
+          GDScript backtrace (most recent call first):
+              [0] _out_of_bounds (res://tests/subjects/runtime_error.gd:11)
+              [1] _drive (res://addons/hegel/hegel.gd)
+              [2] _guarded (res://addons/hegel/hegel.gd)
+              [3] run (res://addons/hegel/hegel.gd)
+              [4] _run (res://tests/subjects/runtime_error.gd:5)
+              [5] _initialize (res://tests/support/subject.gd:9)
+SCRIPT ERROR: Invalid assignment of index '55' (on base: 'Array') with value of type 'int'.
+          at: _out_of_bounds (res://tests/subjects/runtime_error.gd:11)
+          GDScript backtrace (most recent call first):
+              [0] _out_of_bounds (res://tests/subjects/runtime_error.gd:11)
+              [1] _drive (res://addons/hegel/hegel.gd)
+              [2] _guarded (res://addons/hegel/hegel.gd)
+              [3] run (res://addons/hegel/hegel.gd)
+              [4] _run (res://tests/subjects/runtime_error.gd:5)
+              [5] _initialize (res://tests/support/subject.gd:9)
+SCRIPT ERROR: Invalid assignment of index '1' (on base: 'Array') with value of type 'int'.
+          at: _out_of_bounds (res://tests/subjects/runtime_error.gd:11)
+          GDScript backtrace (most recent call first):
+              [0] _out_of_bounds (res://tests/subjects/runtime_error.gd:11)
+              [1] _drive (res://addons/hegel/hegel.gd)
+              [2] _guarded (res://addons/hegel/hegel.gd)
+              [3] run (res://addons/hegel/hegel.gd)
+              [4] _run (res://tests/subjects/runtime_error.gd:5)
+              [5] _initialize (res://tests/support/subject.gd:9)
+SCRIPT ERROR: Invalid assignment of index '2' (on base: 'Array') with value of type 'int'.
+          at: _out_of_bounds (res://tests/subjects/runtime_error.gd:11)
+          GDScript backtrace (most recent call first):
+              [0] _out_of_bounds (res://tests/subjects/runtime_error.gd:11)
+              [1] _drive (res://addons/hegel/hegel.gd)
+              [2] _guarded (res://addons/hegel/hegel.gd)
+              [3] run (res://addons/hegel/hegel.gd)
+              [4] _run (res://tests/subjects/runtime_error.gd:5)
+              [5] _initialize (res://tests/support/subject.gd:9)
+SCRIPT ERROR: Invalid assignment of index '100' (on base: 'Array') with value of type 'int'.
+          at: _out_of_bounds (res://tests/subjects/runtime_error.gd:11)
+          GDScript backtrace (most recent call first):
+              [0] _out_of_bounds (res://tests/subjects/runtime_error.gd:11)
+              [1] _drive (res://addons/hegel/hegel.gd)
+              [2] _guarded (res://addons/hegel/hegel.gd)
+              [3] run (res://addons/hegel/hegel.gd)
+              [4] _run (res://tests/subjects/runtime_error.gd:5)
+              [5] _initialize (res://tests/support/subject.gd:9)
+SCRIPT ERROR: Invalid assignment of index '3' (on base: 'Array') with value of type 'int'.
+          at: _out_of_bounds (res://tests/subjects/runtime_error.gd:11)
+          GDScript backtrace (most recent call first):
+              [0] _out_of_bounds (res://tests/subjects/runtime_error.gd:11)
+              [1] _drive (res://addons/hegel/hegel.gd)
+              [2] _guarded (res://addons/hegel/hegel.gd)
+              [3] run (res://addons/hegel/hegel.gd)
+              [4] _run (res://tests/subjects/runtime_error.gd:5)
+              [5] _initialize (res://tests/support/subject.gd:9)
+SCRIPT ERROR: Invalid assignment of index '4' (on base: 'Array') with value of type 'int'.
+          at: _out_of_bounds (res://tests/subjects/runtime_error.gd:11)
+          GDScript backtrace (most recent call first):
+              [0] _out_of_bounds (res://tests/subjects/runtime_error.gd:11)
+              [1] _drive (res://addons/hegel/hegel.gd)
+              [2] _guarded (res://addons/hegel/hegel.gd)
+              [3] run (res://addons/hegel/hegel.gd)
+              [4] _run (res://tests/subjects/runtime_error.gd:5)
+              [5] _initialize (res://tests/support/subject.gd:9)
+SCRIPT ERROR: Invalid assignment of index '5' (on base: 'Array') with value of type 'int'.
+          at: _out_of_bounds (res://tests/subjects/runtime_error.gd:11)
+          GDScript backtrace (most recent call first):
+              [0] _out_of_bounds (res://tests/subjects/runtime_error.gd:11)
+              [1] _drive (res://addons/hegel/hegel.gd)
+              [2] _guarded (res://addons/hegel/hegel.gd)
+              [3] run (res://addons/hegel/hegel.gd)
+              [4] _run (res://tests/subjects/runtime_error.gd:5)
+              [5] _initialize (res://tests/support/subject.gd:9)
+SCRIPT ERROR: Invalid assignment of index '6' (on base: 'Array') with value of type 'int'.
+          at: _out_of_bounds (res://tests/subjects/runtime_error.gd:11)
+          GDScript backtrace (most recent call first):
+              [0] _out_of_bounds (res://tests/subjects/runtime_error.gd:11)
+              [1] _drive (res://addons/hegel/hegel.gd)
+              [2] _guarded (res://addons/hegel/hegel.gd)
+              [3] run (res://addons/hegel/hegel.gd)
+              [4] _run (res://tests/subjects/runtime_error.gd:5)
+              [5] _initialize (res://tests/support/subject.gd:9)
+SCRIPT ERROR: Invalid assignment of index '1' (on base: 'Array') with value of type 'int'.
+          at: _out_of_bounds (res://tests/subjects/runtime_error.gd:11)
+          GDScript backtrace (most recent call first):
+              [0] _out_of_bounds (res://tests/subjects/runtime_error.gd:11)
+              [1] _drive (res://addons/hegel/hegel.gd)
+              [2] _guarded (res://addons/hegel/hegel.gd)
+              [3] run (res://addons/hegel/hegel.gd)
+              [4] _run (res://tests/subjects/runtime_error.gd:5)
+              [5] _initialize (res://tests/support/subject.gd:9)
+--- Failure: res://tests/subjects/runtime_error.gd::_run ---
+Falsified after 2 test cases (0 discarded):
+
+  var draw_1 = 1
+
+Script error: Invalid assignment of index '1' (on base: 'Array') with value of type 'int'. (res://tests/subjects/runtime_error.gd:11)
+  at _out_of_bounds (res://tests/subjects/runtime_error.gd:11)
+Reproduce with: Hegel.replay("[blob]", <body>)
+ERROR: Hegel: property failed at script error: res://tests/subjects/runtime_error.gd:11; the report is above
+   at: push_error ([godot])
+   GDScript backtrace (most recent call first):
+       [0] _announced (res://addons/hegel/hegel.gd)
+       [1] _guarded (res://addons/hegel/hegel.gd)
+       [2] run (res://addons/hegel/hegel.gd)
+       [3] _run (res://tests/subjects/runtime_error.gd:5)
+       [4] _initialize (res://tests/support/subject.gd:9)
