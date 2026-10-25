@@ -187,6 +187,41 @@ static func text(
 	return _Text.new(native, char(clampi(0x30, min_codepoint, max_codepoint)).repeat(min_size))
 
 
+## Strings of [param min_size] to [param max_size] characters, each one of
+## [param alphabet]'s: [code]Gs.text_from("=[]\";#")[/code] draws strings
+## of config syntax. [param max_size] -1 means 100, or
+## [code]min_size + 100[/code] when [param min_size] is larger. They shrink as
+## [method text]'s do: towards shorter strings, and for each character towards
+## the alphabet's lowest at or above [code]"0"[/code], else its highest.
+## [br][br]
+## An empty [param alphabet] draws only [code]""[/code], and is a usage error
+## with a positive [param min_size], as are negative sizes and a
+## [param max_size] below [param min_size].
+static func text_from(alphabet: String, min_size := 0, max_size := -1) -> HegelGenerator:
+	var invalid := _check_sizes("text_from", min_size, max_size)
+	if invalid:
+		return invalid
+	if max_size == -1:
+		max_size = min_size + 100 if min_size > 100 else 100
+	# The engine rejects an empty alphabet unless max_size is 0; Python's text spells "" from it.
+	if alphabet.is_empty() and min_size == 0:
+		max_size = 0
+	var native := HegelNativeStringGenerator.new()
+	if native.text_from(alphabet, min_size, max_size) != HegelNative.OK:
+		return _Invalid.new(native.last_error)
+	if alphabet.is_empty():
+		return _Text.new(native, "")
+	# The engine's simplest character: the lowest at or above "0", else the highest.
+	var simplest := -1
+	for i: int in alphabet.length():
+		var c := alphabet.unicode_at(i)
+		if simplest < 0x30:
+			simplest = maxi(simplest, c)
+		elif c >= 0x30:
+			simplest = mini(simplest, c)
+	return _Text.new(native, char(simplest).repeat(min_size))
+
+
 ## A usage error for a collection's arguments, or null when they are valid.
 static func _check_collection(
 	factory: String,

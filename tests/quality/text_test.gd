@@ -4,6 +4,7 @@ extends GdUnitTestSuite
 ## find_quality/test_strings.cpp; each test names its upstream case. Lengths
 ## are in characters, where upstream counts UTF-8 codepoints. Not ported:
 ## FindStrings.CanProduceLargeBinaryStrings, since there is no binary().
+## Upstream has no quality case for an alphabet, so text_from's are new.
 
 const Gs := preload("res://addons/hegel/generators.gd")
 const Q := preload("res://tests/support/quality.gd")
@@ -52,6 +53,22 @@ func test_minimize_longer_string() -> void:
 func test_minimize_longer_list_of_strings() -> void:
 	var v: Array = Q.minimal(Gs.lists(Gs.text()), func(x: Array) -> bool: return x.size() >= 10)
 	assert_array(v).is_equal(["", "", "", "", "", "", "", "", "", ""])
+
+
+# text_from, with no upstream case: an alphabet's simplest character is its
+# lowest at or above "0", else its highest, as in the engine's shrink order.
+func test_text_from_shrinks_towards_its_simplest_character() -> void:
+	assert_str(Q.minimal(Gs.text_from("ba", 1, 1), _any)).is_equal("a")
+	assert_str(Q.minimal(Gs.text_from("]=[", 3), _any)).is_equal("===")
+	assert_str(Q.minimal(Gs.text_from("#!", 1), _any)).is_equal("#")
+	assert_str(Q.minimal(Gs.text_from("z9!", 1), _any)).is_equal("9")
+
+
+# text_from, with no upstream case.
+func test_text_from_shrinks_towards_shorter_strings() -> void:
+	assert_str(Q.minimal(Gs.text_from("ab"), _any)).is_equal("")
+	var v: String = Q.minimal(Gs.text_from("xy"), func(x: String) -> bool: return x.length() >= 5)
+	assert_str(v).is_equal("xxxxx")
 
 
 # find_quality

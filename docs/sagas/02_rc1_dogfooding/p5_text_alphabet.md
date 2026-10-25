@@ -26,10 +26,10 @@ D5: `Gs.text_from(alphabet: String, min_size := 0, max_size := -1) -> HegelGener
 
 ## Completion
 
-- [ ] The new tests are red before and green after.
-- [ ] Break it (drop `include_characters`, or pass NULL categories): the alphabet test goes red. Restore it.
-- [ ] `cargo fmt --check` and `cargo clippy -- -D warnings` clean.
-- [ ] `just check` green; CI green on all three platforms on push.
+- [x] The new tests are red before and green after.
+- [x] Break it (drop `include_characters`, or pass NULL categories): the alphabet test goes red. Restore it.
+- [x] `cargo fmt --check` and `cargo clippy -- -D warnings` clean.
+- [x] `just check` green. CI on all three platforms is left to the owner's push.
 
 ## Non-goals
 

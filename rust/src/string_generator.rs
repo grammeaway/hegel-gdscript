@@ -1,4 +1,4 @@
-use crate::{Outcome, call, out_of_range};
+use crate::{Outcome, call, hstr, out_of_range};
 use godot::prelude::*;
 use hegel_c as c;
 use std::ptr;
@@ -29,20 +29,17 @@ impl HegelNativeStringGenerator {
         self.last_error = error;
         result
     }
-}
 
-#[godot_api]
-impl HegelNativeStringGenerator {
-    /// Builds a Unicode text generator, freeing any generator this object
-    /// held before. Sizes are in characters; codepoints bound the alphabet,
-    /// with no category or character filters.
-    #[func]
-    fn text(
+    /// Frees any generator this object held, then builds one with a single
+    /// `hegel_string_generator_text` call. With `alphabet`, an empty
+    /// non-NULL category list leaves its characters as the only ones.
+    fn build(
         &mut self,
         min_size: i64,
         max_size: i64,
         min_codepoint: i64,
         max_codepoint: i64,
+        alphabet: Option<&str>,
     ) -> i64 {
         call(|ctx| unsafe { c::hegel_string_generator_free(ctx, self.raw) });
         self.raw = ptr::null_mut();
@@ -58,6 +55,11 @@ impl HegelNativeStringGenerator {
         let Ok(max_cp) = u32::try_from(max_codepoint) else {
             return self.record(out_of_range("max_codepoint", max_codepoint));
         };
+        let no_categories: [c::hegel_string_t; 0] = [];
+        let (categories, include) = match alphabet {
+            Some(chars) => (no_categories.as_ptr(), hstr(chars)),
+            None => (ptr::null(), c::hegel_string_t::default()),
+        };
         let mut raw = ptr::null_mut();
         let outcome = call(|ctx| unsafe {
             c::hegel_string_generator_text(
@@ -67,16 +69,40 @@ impl HegelNativeStringGenerator {
                 ptr::null(),
                 min_cp,
                 max_cp,
-                ptr::null(),
+                categories,
                 0,
                 ptr::null(),
                 0,
-                c::hegel_string_t::default(),
+                include,
                 c::hegel_string_t::default(),
                 &mut raw,
             )
         });
         self.raw = raw;
         self.record(outcome)
+    }
+}
+
+#[godot_api]
+impl HegelNativeStringGenerator {
+    /// Builds a Unicode text generator, freeing any generator this object
+    /// held before. Sizes are in characters; codepoints bound the alphabet,
+    /// with no category or character filters.
+    #[func]
+    fn text(
+        &mut self,
+        min_size: i64,
+        max_size: i64,
+        min_codepoint: i64,
+        max_codepoint: i64,
+    ) -> i64 {
+        self.build(min_size, max_size, min_codepoint, max_codepoint, None)
+    }
+
+    /// Like `text`, but drawing only `alphabet`'s characters.
+    #[func]
+    fn text_from(&mut self, alphabet: GString, min_size: i64, max_size: i64) -> i64 {
+        let alphabet = alphabet.to_string();
+        self.build(min_size, max_size, 0, u32::MAX.into(), Some(&alphabet))
     }
 }

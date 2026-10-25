@@ -66,7 +66,10 @@ The factories are static functions on `HegelGenerators`, aliased as `Gs`. Each r
 | `tuples(a, b, ...)` | a fixed-length Array, one value from each generator | each element |
 | `dictionaries(keys, values, min_size, max_size)` | Dictionaries; `max_size` -1 is no bound | fewer, simpler entries |
 | `text(min_size, max_size, min_codepoint, max_codepoint)` | Strings; `max_size` -1 means 100; never U+0000 | shorter strings of `"0"` |
+| `text_from(alphabet, min_size, max_size)` | Strings of `alphabet`'s characters; `max_size` -1 means 100 | shorter strings of its lowest character at or above `"0"`, else its highest |
 | `composite(fn)` | whatever `fn.call(tc)` returns; `fn` draws from `tc` | each draw it makes |
+
+`text` rarely draws a given ASCII character, so a parser of config syntax hardly ever sees `=` or `[`. `Gs.one_of(Gs.text(), Gs.text_from("=[]\";#"))` mixes syntax characters into general text.
 
 Every generator also has:
 

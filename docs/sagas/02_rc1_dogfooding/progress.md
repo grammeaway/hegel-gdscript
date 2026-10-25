@@ -10,7 +10,7 @@ Live log for `README.md`'s plans. One row per plan; details under Deviations and
 | p2 database key per test | done | `19ab72f` | Tests in a new `tests/database_test.gd` |
 | p3 draw name validation | done | `c8f9b2b` | Tests in `tests/test_case_test.gd` |
 | p4 expected errors | done | `7a96b8e` | `HegelTestCase._on_error` decides: collect or end |
-| p5 text alphabet | planned | | |
+| p5 text alphabet | done | `4b10e2d` | A `text_from` `#[func]` beside `text`, over one private `build` |
 | p6 docs round | planned | | |
 
 ## Decisions
@@ -24,6 +24,8 @@ Decisions taken during passes, with who took them (owner or agent) and when. Pla
 - **p3, agent, 2026-10-25:** the usage error reads `draw names must be GDScript identifiers, but got "<name>"`, with the name `c_escape`d so a newline in it can't split the pushed line. The check runs on every draw, nested ones included, since a generator's inner draws take names too.
 
 - **p4, agent, 2026-10-25:** the capture hands every error to the case's `_on_error(script_error, message, origin, failure)`, which replaces `_fail_with_error`; the case collects under its `Mutex`. Nesting is one `PackedStringArray` and an open-call count: each call returns the slice past where it started, and truncates it back. An error's message is the report's (`rationale`, else `code`). The guide's subsection is a bold-lead paragraph under Runtime errors, as the guide's other subsections are, and also says gdUnit4's `report/godot/push_error` setting still counts expected errors. The `CHANGELOG.md` entry sits in `Added`, marked new since `v0.1.0-rc.1`.
+
+- **p5, agent, 2026-10-25:** natively, a second `#[func]`, `text_from(alphabet, min_size, max_size)`, beside `text`; both go through one private `build` that frees the old handle and makes the one `hegel_string_generator_text` call, with an empty non-NULL category list and `alphabet` as `include_characters` for `text_from`. An empty alphabet with `min_size` 0 goes to the engine with `max_size` 0, which it accepts, so the generator keeps `text`'s label; Python returns `just("")` instead, since the engine rejects an empty alphabet whenever `max_size > 0`. With `min_size > 0` the engine's rejection (`No valid characters…`) is the usage error, as Python rejects it too, so engine and upstream agree and nothing goes under Found. The simplest character is the alphabet's lowest at or above `"0"`, else its highest, read from the engine's shrink order (`libhegel/src/native/intervalsets.rs`, `char_in_shrink_order`) and confirmed with `minimal` on `"ba"`, `"]=["`, `"#!"` and `"z9!"`.
 
 ## Deviations
 
@@ -52,6 +54,13 @@ Per plan: where the work differed from the plan, and why.
 - The guide snippet fails under the plain runner with collection broken, and passes with it restored.
 - Red against a stub `expect_errors` that only calls `fn` (the method had to exist for the scenario script to parse): five scenarios failed on the error they expected; `script_error_in_expect_errors` passed, as a guard should. With the feature in, all six pass. Collecting script errors too turned `script_error_in_expect_errors` red; collecting nothing turned the other five red. Restored.
 - A script error inside `fn` lists the addon's `expect_errors` frame in the report's backtrace, between the user's frames. Left as is: it is where the call went, and the origin still skips addon frames.
+
+**p5**
+
+- Upstream has no quality case with an alphabet (C++ `shrink_quality`/`find_quality`, Python's Hypothesis port), so the two in `tests/quality/text_test.gd` are new, and its header says so.
+- Red against a stub `text_from` that returned `text(min_size, max_size)`: every new test failed but `test_text_from_reaches_every_character_of_its_alphabet`, since unrestricted text reaches `=`, `[` and the rest within 300 cases. It pins reachability; exclusion is the alphabet test's job. With the feature in, all pass. Passing NULL categories turned the alphabet, empty-alphabet, quality and native tests red; dropping `include_characters` turned every `text_from` test red; taking the alphabet's first character as the simplest turned the terminal-event test red; dropping the empty-alphabet `max_size = 0` turned the empty-alphabet test red. Restored.
+- Also a native smoke test, `test_string_draws_from_an_alphabet`, beside `test_string_draws`.
+- The guide line names the case: `text` rarely draws a given ASCII character, then the `one_of` example, inline rather than as a block, since it isn't a whole test.
 
 ## Found
 

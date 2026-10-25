@@ -236,6 +236,21 @@ func test_string_draws() -> void:
 	tc.mark_complete(HegelNativeTestCase.STATUS_VALID, "")
 
 
+func test_string_draws_from_an_alphabet() -> void:
+	var generator := HegelNativeStringGenerator.new()
+	assert_int(generator.text_from("ab", -1, 5)).is_equal(HegelNative.E_INVALID_ARG)
+	assert_str(generator.last_error).contains("min_size")
+	assert_int(generator.text_from("", 0, 1)).is_equal(HegelNative.E_INVALID_ARG)
+	assert_int(generator.text_from("", 0, 0)).is_equal(HegelNative.OK)
+	assert_int(generator.text_from("é", 2, 2)).is_equal(HegelNative.OK)
+	var run := HegelNativeRun.new()
+	run.start(_settings(SEED))
+	var tc := run.next_test_case()
+	assert_str(tc.generate_string(generator)).is_equal("éé")
+	assert_int(tc.last_result).is_equal(HegelNative.OK)
+	tc.mark_complete(HegelNativeTestCase.STATUS_VALID, "")
+
+
 func test_state_machine_calls() -> void:
 	var run := HegelNativeRun.new()
 	run.start(_settings(SEED))

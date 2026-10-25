@@ -21,6 +21,14 @@ static func _any(_s: String) -> bool:
 	return true
 
 
+static func _only(alphabet: String) -> Callable:
+	return func(s: String) -> bool:
+		for c: String in s:
+			if not alphabet.contains(c):
+				return false
+		return true
+
+
 func test_text_defaults_to_at_most_100_characters() -> void:
 	Q.assert_all_examples(Gs.text(), _length_in(0, 100))
 	Q.find_any(Gs.text(), func(s: String) -> bool: return s.length() > 20)
@@ -91,3 +99,53 @@ func test_invalid_text_arguments_are_usage_errors() -> void:
 	assert_str(Q.usage_error(Gs.text(0, -1, 70, 65))).contains("got 70 and 65")
 	assert_str(Q.usage_error(Gs.text(0, -1, 0, 0))).contains("U+0000")
 	assert_str(Q.usage_error(Gs.text(1, -1, 0xD800, 0xDFFF))).contains("No valid characters")
+
+
+func test_text_from_draws_only_its_alphabet() -> void:
+	var syntax := "=[]\";#"
+	Q.assert_all_examples(Gs.text_from(syntax), _only(syntax))
+	Q.assert_all_examples(Gs.text_from(syntax), _length_in(0, 100))
+	Q.assert_all_examples(Gs.text_from("xyz", 3, 5), _only("xyz"))
+	Q.assert_all_examples(Gs.text_from("xyz", 3, 5), _length_in(3, 5))
+	Q.assert_all_examples(Gs.text_from("é😀", 1, 4), _only("é😀"))
+	Q.assert_all_examples(Gs.text_from("ab", 150), _length_in(150, 250), 5)
+
+
+func test_text_from_reaches_every_character_of_its_alphabet() -> void:
+	for c: String in "=[]\";#":
+		Q.find_any(Gs.text_from("=[]\";#"), func(s: String) -> bool: return s.contains(c))
+	Q.find_any(
+		Gs.text_from("=[]"),
+		func(s: String) -> bool: return s.contains("=") and s.contains("[") and s.contains("]")
+	)
+
+
+func test_an_empty_alphabet_draws_only_the_empty_string() -> void:
+	Q.assert_all_examples(Gs.text_from(""), func(s: String) -> bool: return s.is_empty())
+	assert_str(Q.usage_error(Gs.text_from("", 1))).contains("No valid characters")
+
+
+func test_text_from_gives_its_simplest_value_after_a_terminal_event() -> void:
+	var drawn := []
+	Hegel.run(
+		func(tc: HegelTestCase) -> void:
+			tc.check(false)
+			drawn.append(
+				[
+					tc.draw(Gs.text_from("ba")),
+					tc.draw(Gs.text_from("ba", 2)),
+					tc.draw(Gs.text_from("!#", 2)),
+					tc.draw(Gs.text_from("", 0, 0)),
+				]
+			),
+		Q._settings(10)
+	)
+	assert_array(drawn.back()).is_equal(["", "aa", "##", ""])
+
+
+func test_invalid_text_from_arguments_are_usage_errors() -> void:
+	assert_str(Q.usage_error(Gs.text_from("ab", -1))).contains("min_size >= 0, got -1")
+	assert_str(Q.usage_error(Gs.text_from("ab", 0, -2))).contains(
+		"max_size >= 0, or -1 for no bound, got -2"
+	)
+	assert_str(Q.usage_error(Gs.text_from("ab", 3, 2))).contains("min_size <= max_size")
