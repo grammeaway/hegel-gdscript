@@ -16,4 +16,5 @@ The first release: a property-based testing addon for Godot 4.5 and newer, on He
 - Runtime errors as failures: a script error, a `push_error` or an engine error in the body fails the case, from any thread.
 - `HegelSettings`, read from Hegel's settings profile and `HEGEL_*` environment variables, with the `ci` profile on CI servers.
 - `HegelStateMachine`: stateful tests from `rule_*` and `invariant_*` methods, shrunk to a short sequence of steps.
-- A plain headless runner, `addons/hegel/cli/run.gd`, for projects without a test framework.
+- A plain headless runner, `addons/hegel/cli/run.gd`, for projects without a test framework. It exits with 1, and says so, when the platform's native library is missing.
+- Release zips holding `addons/hegel/` with the libraries for all three platforms.

@@ -11,6 +11,9 @@ extends SceneTree
 ## then exits with 1 if any test failed, or 0.
 
 const _USAGE := "Usage: godot --headless --path . -s res://addons/hegel/cli/run.gd -- <path>..."
+const _NO_LIBRARY := (
+	"Hegel's native library didn't load: addons/hegel/bin/ needs the one for this platform"
+)
 
 
 ## Counts errors logged while no property runs: those inside a body are the
@@ -54,6 +57,10 @@ func _initialize() -> void:
 func _run(paths: PackedStringArray) -> int:
 	if paths.is_empty():
 		printerr(_USAGE)
+		return 1
+	# Without it Hegel doesn't compile, and the logger below couldn't count errors.
+	if not ClassDB.class_exists(&"HegelNativeRun"):
+		printerr(_NO_LIBRARY)
 		return 1
 	var files: PackedStringArray = []
 	for path: String in paths:

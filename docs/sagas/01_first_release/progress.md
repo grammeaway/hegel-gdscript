@@ -14,7 +14,7 @@ This is the live log for the plans in `README.md`. There is one row per plan; de
 | p6 collections and text | done | `2fd6131` | 243 tests green; collection and text quality ported, plus p5's deferred list cases; mutation checks red |
 | p7 state machines | done | `9f6b589` | 266 tests green, 11 approved snapshots; class-based API (P7.1); mutation checks red |
 | p8 docs and integration | done | `d2a5ad1` | 280 tests green; owner's in-editor check passed |
-| p9 ci and release | planned | | |
+| p9 ci and release | in progress | `395dfab` | workflows written, `just check` green, package smoke-tested locally; waiting on the owner's push for CI results |
 
 ## Decisions
 
@@ -97,6 +97,17 @@ Decisions taken during passes, with who took each one (owner or agent) and when.
 | P8.8 | Export exclusion is documented as the preset's exclude filter `addons/hegel/*`. Checked with `--export-pack` on a copy of the project (no export templates are installed, and a pack needs none): with the filter, the pack holds no addon file and no `.godot/extension_list.cfg`, and runs headless with no error; without it, the pack registers `hegel.gdextension`. A full binary export wasn't tried. | 2026-10-24, agent |
 | P8.9 | The README calls hegel-gdscript a community frontend, not part of the Hegel project, and links releases to the GitHub releases page p9 fills. | 2026-10-24, agent |
 | P7.7 | A rejected step: after the rule returns, `tc._reopen()` undoes an INVALID end that isn't a run error, under the case lock (an engine `E_ASSUME` counts too, as Python's `AssumeFailed` covers both). A rejection in an invariant rejects the case, as in Python. The round span's label is `hegel-gdscript.stateful.rule`. | 2026-10-24, agent |
+| P9.1 | Actions are pinned to commit SHAs with a `# vX.Y.Z` comment, as upstream Hegel's workflows. Tools CI downloads (just 1.59.0, Godot) are pinned and checked against their releases' checksum files. | 2026-10-25, owner |
+| P9.2 | `actionlint` v1.7.12 and Godot 4.5.2 (Linux) were downloaded to `/tmp/p9`, checked against their release checksums, and not installed. | 2026-10-25, owner |
+| P9.3 | The release zip holds only `addons/hegel/`, with `LICENSE`, `README.md` and `CHANGELOG.md` inside it: at the zip's root they would overwrite a user's own files when unzipped into a project. | 2026-10-25, owner |
+| P9.4 | The editor's rewrite of `project.godot` (from p8's editor check) is reverted, and `addons/gdUnit4/GdUnitRunner.cfg`, gdUnit4's per-run file, is gitignored. | 2026-10-25, owner |
+| P9.5 | Release notes come from CHANGELOG.md's section for the tag's version; a pre-release tag (with a `-`) takes `Unreleased` and is marked a pre-release; a release tag without its section fails. The first release is `v0.1.0`. | 2026-10-25, owner |
+| P9.6 | macOS runs on `macos-15`, not the plan's `macos-14`: GitHub retires `macos-14` on 2026-11-02, with brownouts on 2026-10-26, 29 and 30. The floor job uses Godot 4.5.2, the newest 4.5.x. | 2026-10-25, agent |
+| P9.7 | Shared setup is three composite actions under `.github/actions/`: `setup-rust` (`rustup toolchain install` reads `rust-toolchain.toml`, then `Swatinem/rust-cache` on `rust/`), `setup-just` (the checksummed release on all three OSes; upstream uses brew on macOS) and `setup-godot` (the official zip, checked against `SHA512-SUMS.txt`, cached per version and OS; Windows uses the console build so that output reaches pipes; Windows paths go through `cygpath -m`, since the justfile's `{{godot}}` is unquoted in bash). Every `run` uses bash, so Windows behaves as the others. | 2026-10-25, agent |
+| P9.8 | `just package` zips through Python's `shutil.make_archive` (deflated, and Windows runners have no `zip`); `smoke-package` unzips through `shutil.unpack_archive`. CI's `test` job packages and smoke-tests the one library it built, on each platform; `release.yml` smoke-tests the final three-library zip on each platform before publishing. | 2026-10-25, agent |
+| P9.9 | `.gitattributes` sets `* text=auto eol=lf`. Windows runners' git converts to CRLF by default, which would break `runtest.sh` under bash and the approved snapshots. Every tracked file was already LF in the index, so nothing was renormalized. | 2026-10-25, agent |
+| P9.10 | The plain runner exits 1 with `Hegel's native library didn't load: …` when `HegelNativeRun` isn't registered. Found by the smoke test's mutation check (a wrong library path in `hegel.gdextension`): without the library, `Hegel` doesn't compile, so the runner's logger failed on `Hegel._in_progress()` at every error, counted none, and printed `PASS`. | 2026-10-25, agent |
+| P9.11 | CI runs on every push (any branch, and tags) and every pull request: the completion check's throwaway branch needs branch pushes. The release's Linux library builds on ubuntu-latest: the library built here (glibc 2.42) needs at most `GLIBC_2.34`, so Ubuntu 22.04 and newer load it. There is no check that the tag matches `rust/Cargo.toml`'s version, which no user sees. | 2026-10-25, agent |
 
 ## Deviations
 
@@ -181,6 +192,15 @@ For each plan: where the work differed from the plan, and why.
 - Step 5's in-editor run: I can't drive the editor's GUI, so I tried the closest headless thing, Godot's local debugger (`godot -d`) on an error-caused failure. It breaks at the script error on every rerun (7 breaks while shrinking `price_of`); after continuing each one, the Logger has captured the error and the report is right. `push_error` doesn't break. The owner's editor check (2026-10-25, Godot 4.7.2, gdUnit4 6.2.2 **Debug Testsuites** on `examples/gdunit4/`): with error breaks on, the debugger paused at `inventory.gd:17` once for each of the 7 reruns. After continuing each one, the run finished: 1 passed, `test_rows_fit_every_item` failed with no pause, and `test_every_stocked_item_has_a_price` was marked an error (7 gdUnit4 errors) with the `var item = "potion"` report. Nothing hung. With **Ignore Error Breaks** on, the same results came in 83 ms with no pause. That run replayed the saved failure from the database (`Falsified after 1 test case`, 2 errors). The guide's Limitations section says this. The `Gs.` autocomplete check (F6) wasn't done in that session; it's still open, and nothing in the docs depends on it.
 - Completion checks: the plain runner exits 1 on `examples/plain/` (`count = 1`, `columns = 2`) and 0 with `rows_for` fixed to round up.
 - Mutation checks: ignoring `Hegel._in_progress()` in the runner turns 3 runner tests red (the error after a rejection counts); not freeing Node instances turns the passing-directory test red (a leak at exit); not recursing turns 2 red; never failing a test turns 2 red. `Gs.integers` renamed to `Gs.ints` in a passing guide snippet, a failing guide snippet and the README's gdUnit4 snippet each turn their docs test red; dropping the gdUnit4 example's `override_failure_message(result.report)` turns the examples test red.
+
+**p9**
+
+- `macos-15` replaces `macos-14` (P9.6), and the zip's extra files live inside `addons/hegel/` (P9.3, owner).
+- `addons/hegel/cli/run.gd` changed, outside the plan's list: the smoke test couldn't catch a missing library without it (P9.10).
+- Beyond the plan: `release.yml` smoke-tests the final zip on all three platforms before it publishes, and `.gitattributes` pins LF (P9.9).
+- Step 2: `actionlint` v1.7.12 over both workflows reports nothing. It found no `shellcheck` here, so the `run` scripts weren't shellchecked.
+- The floor ran locally before any push: Godot 4.5.2 imported a copy of the project and passed all 280 tests.
+- Step 3: `just package` makes a 2.8 MB zip of the 28 files under `addons/hegel/` (the Linux library only, locally); `just smoke-package` unzips it into `dist/smoke/`, imports, and passes. Mutation check: the same zip with `hegel.gdextension` pointing at a missing library printed `PASS` and exited 0 before P9.10, and exits 1 with the message after it.
 
 ## Found
 

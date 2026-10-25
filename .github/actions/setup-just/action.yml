@@ -1,0 +1,41 @@
+name: Set up just
+description: >-
+  Download the pinned just release for the runner's OS, verify its checksum, and
+  put it on PATH. To bump: take the version and the matching lines from
+  https://github.com/casey/just/releases/download/<version>/SHA256SUMS.
+runs:
+  using: composite
+  steps:
+    - name: Install just
+      shell: bash
+      env:
+        JUST_VERSION: 1.59.0
+      run: |
+        set -euo pipefail
+        case "$RUNNER_OS" in
+          Linux)
+            archive="just-$JUST_VERSION-x86_64-unknown-linux-musl.tar.gz"
+            sha=409044617b6f06517c1035e55ca38c8c856ff8b650e41bc2aa1ef82d5903a23e ;;
+          macOS)
+            archive="just-$JUST_VERSION-aarch64-apple-darwin.tar.gz"
+            sha=6574cea774ed4cae12e24b6aa11857de33e80dab4667cf628fd5840df96a2a9d ;;
+          Windows)
+            archive="just-$JUST_VERSION-x86_64-pc-windows-msvc.zip"
+            sha=9c5463e2d0974e31bee71346aa5cbf19167de1585a4abc1bae7b3b04604ea9c0 ;;
+        esac
+        temp="$RUNNER_TEMP"
+        if [[ "$RUNNER_OS" == Windows ]]; then temp="$(cygpath -m "$RUNNER_TEMP")"; fi
+        dir="$temp/just-$JUST_VERSION"
+        mkdir -p "$dir"
+        curl -sSfL --retry 5 --retry-delay 10 -o "$dir/$archive" \
+          "https://github.com/casey/just/releases/download/$JUST_VERSION/$archive"
+        echo "$sha  $dir/$archive" | shasum -a 256 -c -
+        if [[ "$RUNNER_OS" == Windows ]]; then
+          7z x -y -o"$dir" "$dir/$archive" > /dev/null
+        else
+          tar -xzf "$dir/$archive" -C "$dir" just
+        fi
+        echo "$dir" >> "$GITHUB_PATH"
+    - name: Check just
+      shell: bash
+      run: just --version

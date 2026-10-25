@@ -1,0 +1,76 @@
+name: Set up Godot
+description: >-
+  Download an official Godot build for the runner's OS from Godot's GitHub
+  release, verify it against the release's SHA512-SUMS.txt, cache it, and set
+  GODOT to its path. To add a version: take its three lines from
+  https://github.com/godotengine/godot/releases/download/<version>-stable/SHA512-SUMS.txt.
+inputs:
+  version:
+    description: The Godot version, such as 4.7.2.
+    required: true
+runs:
+  using: composite
+  steps:
+    - name: Locate Godot
+      id: locate
+      shell: bash
+      env:
+        VERSION: ${{ inputs.version }}
+      run: |
+        set -euo pipefail
+        temp="$RUNNER_TEMP"
+        if [[ "$RUNNER_OS" == Windows ]]; then temp="$(cygpath -m "$RUNNER_TEMP")"; fi
+        echo "dir=$temp/godot-$VERSION" >> "$GITHUB_OUTPUT"
+    - name: Restore Godot
+      id: cache
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: ${{ steps.locate.outputs.dir }}
+        key: godot-${{ inputs.version }}-${{ runner.os }}
+    - name: Download Godot
+      if: steps.cache.outputs.cache-hit != 'true'
+      shell: bash
+      env:
+        VERSION: ${{ inputs.version }}
+        DIR: ${{ steps.locate.outputs.dir }}
+      run: |
+        set -euo pipefail
+        case "$RUNNER_OS" in
+          Linux) asset="Godot_v$VERSION-stable_linux.x86_64.zip" ;;
+          macOS) asset="Godot_v$VERSION-stable_macos.universal.zip" ;;
+          Windows) asset="Godot_v$VERSION-stable_win64.exe.zip" ;;
+        esac
+        case "$asset" in
+          Godot_v4.7.2-stable_linux.x86_64.zip) sha=9aa00f7a605200940bce3027a567b782f49bd8e940dd06ae9e987bd65aee1b1467edd56ed84fcdcbdd44354bf613bdbb4e5d2913e925850368e150c59ed54c65 ;;
+          Godot_v4.7.2-stable_macos.universal.zip) sha=38aa16e5bba2083941fc5b3e54be0089bd4cc35e32415f5b9fd9a8a6a7b9818255d44532ea8ef94b5aef56c4b407c2d634fa4f657e4ebe681ebbf59b7bac69ca ;;
+          Godot_v4.7.2-stable_win64.exe.zip) sha=83decd58fdf67b9d657958a1ae6bf1929c20785315a81effe245874cdc57acb709bf868e00778a96984338c1b29dafdb453c6847747694621c6ecf5da2259993 ;;
+          Godot_v4.5.2-stable_linux.x86_64.zip) sha=e3ce6194b6d4d2dcef5e5b5136752c084d9d8b9071c10bc2d2011b947ec7439a257c8d23c541cb30699f16d9edea6dff36e6e84d2bec14a8fe9b4e9aacbe5a8d ;;
+          Godot_v4.5.2-stable_macos.universal.zip) sha=0b309feb20b5d6169abbb3a01563dbec0779c2172308c91f0183d0b141b15b5a6a072b388ae2dfc762f7c04da8ae2da9e1e7475d23bc3d24b1824aded2b5d7c0 ;;
+          Godot_v4.5.2-stable_win64.exe.zip) sha=b21115cf3620438e17959d13946bf9c7dceabb6ff71ed32a68996a21e08615edd2d1a3d25641bb3e260d084b31f500231aa59fcf026a5228bcc20ac4e8bade60 ;;
+          *) echo "::error::No checksum for $asset"; exit 1 ;;
+        esac
+        mkdir -p "$DIR"
+        curl -sSfL --retry 5 --retry-delay 10 -o "$DIR/$asset" \
+          "https://github.com/godotengine/godot/releases/download/$VERSION-stable/$asset"
+        echo "$sha  $DIR/$asset" | shasum -a 512 -c -
+        if [[ "$RUNNER_OS" == Windows ]]; then
+          7z x -y -o"$DIR" "$DIR/$asset" > /dev/null
+        else
+          unzip -q "$DIR/$asset" -d "$DIR"
+        fi
+        rm "$DIR/$asset"
+    - name: Set GODOT
+      shell: bash
+      env:
+        VERSION: ${{ inputs.version }}
+        DIR: ${{ steps.locate.outputs.dir }}
+      run: |
+        set -euo pipefail
+        case "$RUNNER_OS" in
+          Linux) godot="$DIR/Godot_v$VERSION-stable_linux.x86_64" ;;
+          macOS) godot="$DIR/Godot.app/Contents/MacOS/Godot" ;;
+          # The console build, so that output reaches the pipe.
+          Windows) godot="$DIR/Godot_v$VERSION-stable_win64_console.exe" ;;
+        esac
+        "$godot" --version
+        echo "GODOT=$godot" >> "$GITHUB_ENV"

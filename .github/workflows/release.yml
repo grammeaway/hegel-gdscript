@@ -1,0 +1,127 @@
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions: {}
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  build:
+    name: build (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-15]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-rust
+      - uses: ./.github/actions/setup-just
+      - run: just build
+      - name: Sign the library ad hoc
+        if: runner.os == 'macOS'
+        run: codesign --force --sign - addons/hegel/bin/*.dylib
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: lib-${{ runner.os }}
+          path: addons/hegel/bin/
+          if-no-files-found: error
+
+  package:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-just
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: lib-*
+          path: addons/hegel/bin/
+          merge-multiple: true
+      - name: Package
+        run: |
+          ls -l addons/hegel/bin/
+          test "$(ls addons/hegel/bin/ | wc -l)" -eq 3
+          just package "${GITHUB_REF_NAME#v}"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: package
+          path: dist/*.zip
+          if-no-files-found: error
+
+  smoke:
+    name: smoke (${{ matrix.os }})
+    needs: package
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-15]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-just
+      - uses: ./.github/actions/setup-godot
+        with:
+          version: 4.7.2
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: package
+          path: dist/
+      - run: just smoke-package "dist/hegel-gdscript-${GITHUB_REF_NAME#v}.zip"
+
+  publish:
+    needs: smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: package
+          path: dist/
+      # A pre-release (a tag with a "-") takes CHANGELOG.md's Unreleased section; a release, its own.
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          version="${GITHUB_REF_NAME#v}"
+          heading="$version"
+          flags=()
+          if [[ "$version" == *-* ]]; then
+            heading=Unreleased
+            flags=(--prerelease)
+          fi
+          awk -v h="$heading" '
+            /^## / { t = $0; sub(/^## \[?/, "", t); sub(/\]?( .*)?$/, "", t); p = (t == h); next }
+            p
+          ' CHANGELOG.md > notes.md
+          if [[ ! -s notes.md ]]; then
+            echo "::error::CHANGELOG.md has no section for $heading"
+            exit 1
+          fi
+          gh release create "$GITHUB_REF_NAME" "dist/hegel-gdscript-$version.zip" \
+            --verify-tag --title "$GITHUB_REF_NAME" --notes-file notes.md "${flags[@]}"

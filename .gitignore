@@ -3,3 +3,5 @@ addons/hegel/bin/
 rust/target/
 *.received.txt
 reports/
+addons/gdUnit4/GdUnitRunner.cfg
+dist/

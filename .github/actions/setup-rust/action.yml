@@ -1,0 +1,12 @@
+name: Set up Rust
+description: Install the toolchain pinned in rust-toolchain.toml and restore the cargo cache.
+runs:
+  using: composite
+  steps:
+    - name: Install the pinned toolchain
+      shell: bash
+      # With no argument, rustup installs the toolchain rust-toolchain.toml names, with its components.
+      run: rustup toolchain install
+    - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+      with:
+        workspaces: rust

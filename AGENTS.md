@@ -13,8 +13,17 @@ Run everything through `just`. Godot 4.7.2 is `godot` on PATH; set `GODOT` to us
 - `just test`: every gdUnit4 suite under `tests/`, headless. Exit 0 is green. The two `Remote Debugger` errors at the start are expected: `runtest.sh` points the debugger at port 0 on purpose.
 - `just lint`: `cargo fmt --check`, `cargo clippy -- -D warnings`, and `gdlint` (gdtoolkit through `uvx`) over `addons/hegel`, `tests` and `examples`.
 - `just check`: lint, build, import, test. It passes at the end of every change.
+- `just package [version]`: zip `addons/hegel/`, with whatever libraries `bin/` holds plus `LICENSE`, `README.md` and `CHANGELOG.md`, into `dist/hegel-gdscript-<version>.zip`. The version defaults to `rust/Cargo.toml`'s.
+- `just smoke-package [zip]`: unzip a package into a fresh project under `dist/smoke/`, import it, and run `tests/package/smoke.gd` through the plain runner.
 
 The Rust toolchain is pinned in `rust-toolchain.toml`.
+
+## CI and releases
+
+- `.github/workflows/ci.yml`, on every push and pull request: `lint`; `test` on ubuntu-latest, windows-latest and macos-15 (build, import, test, then package and smoke-test); `floor`, the suite on Godot 4.5.2, the `compatibility_minimum`.
+- `.github/workflows/release.yml`, on a `v*` tag: builds the three libraries (the dylib signed ad hoc), packages them, smoke-tests the zip on all three platforms, and publishes a GitHub release with it. Its notes are CHANGELOG.md's section for the version; a pre-release tag (`v0.1.0-rc.1`) takes `Unreleased` and is marked a pre-release.
+- To release: move `Unreleased` to `## [<version>] - <date>` in CHANGELOG.md, set the version in `rust/Cargo.toml`, commit, then tag `v<version>` and push the tag.
+- Shared setup lives in `.github/actions/`: `setup-rust`, `setup-just` and `setup-godot`. Actions are pinned to commit SHAs with a version comment; downloaded tools (just, Godot) are pinned and checked against their release checksums. Each action's description says how to bump it.
 
 ## Layout
 
@@ -31,7 +40,10 @@ tests/               gdUnit4 suites, mirroring addons/hegel/; tests/native/ driv
   subjects/          one-scenario SceneTree scripts, run in a fresh process by report_snapshot_test.gd
   support/           helpers; error_scenarios.gd holds error_capture_test.gd's scenarios
   approvals/         each subject's approved, scrubbed output
+  package/smoke.gd   the property `just smoke-package` runs
 examples/            a gdUnit4 suite and a plain-runner script, each failing on purpose
+.github/             CI and release workflows, and their shared setup actions
+dist/                `just package` output (gitignored)
 docs/guide.md        the user guide; README.md is the front door
 docs/sagas/          plans and their progress logs
 ```

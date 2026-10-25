@@ -1,5 +1,7 @@
 # hegel-gdscript
 
+[![ci](https://github.com/grammeaway/hegel-gdscript/actions/workflows/ci.yml/badge.svg)](https://github.com/grammeaway/hegel-gdscript/actions/workflows/ci.yml)
+
 Property-based testing for GDScript. You write a property, a statement that should hold for every input, and hegel-gdscript generates inputs to try to break it. When one does, it shrinks the input to a minimal counterexample and prints a report you can replay.
 
 It is built on [Hegel](https://hegel.dev), the property-based testing engine based on [Hypothesis](https://github.com/hypothesisworks/hypothesis). Hegel's engine does the generating, shrinking and bookkeeping; this addon is a thin GDScript frontend over it. It is a community frontend, not part of the Hegel project.
@@ -36,7 +38,7 @@ Runtime errors count as failures too: a script error or a `push_error` in the co
 
 ## Install
 
-1. Download `hegel-gdscript-<version>.zip` from the [releases](https://github.com/grammeaway/hegel-gdscript/releases) and unzip it into your project, so that you have `addons/hegel/`. Or build it from source (below).
+1. Download `hegel-gdscript-<version>.zip` from the [releases](https://github.com/grammeaway/hegel-gdscript/releases) and unzip it into your project, so that you have `addons/hegel/` (the zip holds nothing else). Or build it from source (below).
 2. Restart the editor, or run `godot --headless --import` once, so Godot registers the classes.
 3. Keep the addon out of your game: in each export preset, under **Resources**, add `addons/hegel/*` to **Filters to exclude files/folders**. It is a test-only addon, and it has no libraries for web or mobile.
 
@@ -76,6 +78,8 @@ godot --headless --path . -s res://addons/hegel/cli/run.gd -- res://tests/proper
 ## Building from source
 
 Building needs Rust (through rustup), [`just`](https://github.com/casey/just), [`uv`](https://docs.astral.sh/uv/) and Godot 4.7. `just build` builds the native library into `addons/hegel/bin/`, and `just check` runs the lints and the test suite. See [CONTRIBUTING.md](CONTRIBUTING.md).
+
+CI builds and tests every push on Linux, Windows and macOS, and on Godot 4.5, the oldest supported version. Releases are built by CI from a version tag: it packages the three libraries, checks that the zip runs a property in a fresh project on each platform, and publishes it.
 
 ## License
 
