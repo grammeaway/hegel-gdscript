@@ -18,3 +18,9 @@ The first release: a property-based testing addon for Godot 4.5 and newer, on He
 - `HegelStateMachine`: stateful tests from `rule_*` and `invariant_*` methods, shrunk to a short sequence of steps.
 - A plain headless runner, `addons/hegel/cli/run.gd`, for projects without a test framework. It exits with 1, and says so, when the platform's native library is missing.
 - Release zips holding `addons/hegel/` with the libraries for all three platforms.
+
+### Changed
+
+Since `v0.1.0-rc.1`:
+
+- `HegelResult.report` holds the error line of a run that ended in an error, so `override_failure_message(result.report)` explains it too. It was empty.

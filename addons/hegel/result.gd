@@ -39,8 +39,11 @@ var error_kind := ErrorKind.NONE
 var error: String
 ## How many times the test body ran, counting rejected cases and shrinking.
 var test_cases: int
-## The failure report for each of [member failures], in order: the shrunk
-## draws and notes, what failed, and how to replay it. "" unless the run failed.
+## Why the run didn't pass, or "" if it did. For a run that ended in an error,
+## the line [method Hegel.run] pushes:
+## [code]Hegel run error (<KIND>): <error>[/code]. Otherwise the failure report
+## for each of [member failures], in order: the shrunk draws and notes, what
+## failed, and how to replay it.
 var report: String
 
 

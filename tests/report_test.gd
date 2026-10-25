@@ -58,11 +58,37 @@ func test_report_frames_the_shrunk_case() -> void:
 	)
 
 
-func test_report_is_empty_unless_the_run_failed() -> void:
+func test_a_passing_run_has_no_report() -> void:
 	assert_str(Hegel.run(func(_tc: HegelTestCase) -> void: pass, _settings()).report).is_empty()
-	var rejected := Hegel.run(func(tc: HegelTestCase) -> void: tc.assume(false), _settings())
-	assert_int(rejected.error_kind).is_equal(HegelResult.ErrorKind.UNSATISFIABLE)
-	assert_str(rejected.report).is_empty()
+
+
+## The report of a run that ended in an error is the error line it pushes.
+func _assert_error_report(result: HegelResult, kind: HegelResult.ErrorKind) -> void:
+	assert_int(result.error_kind).is_equal(kind)
+	assert_str(result.error).is_not_empty()
+	assert_str(result.report).is_equal(
+		"Hegel run error (%s): %s" % [HegelResult.ErrorKind.find_key(kind), result.error]
+	)
+
+
+func test_a_run_that_errors_reports_its_error() -> void:
+	_assert_error_report(
+		Hegel.run(func(tc: HegelTestCase) -> void: tc.assume(false), _settings()),
+		HegelResult.ErrorKind.UNSATISFIABLE
+	)
+	_assert_error_report(
+		Hegel.run(func(tc: HegelTestCase) -> void: tc.draw(Gs.sampled_from([])), _settings()),
+		HegelResult.ErrorKind.USAGE
+	)
+	_assert_error_report(Hegel.replay("", _fails_from_10, _settings()), HegelResult.ErrorKind.USAGE)
+	var inner: Array[HegelResult] = []
+	Hegel.run(
+		func(_tc: HegelTestCase) -> void:
+			inner.append(Hegel.run(func(_tc: HegelTestCase) -> void: pass, _settings())),
+		_settings(1)
+	)
+	assert_array(inner).is_not_empty()
+	_assert_error_report(inner[0], HegelResult.ErrorKind.USAGE)
 
 
 func test_report_without_lines_has_no_body() -> void:
@@ -216,7 +242,7 @@ func test_replay_of_a_fixed_failure_did_not_reproduce() -> void:
 	assert_bool(replayed.passed).is_false()
 	assert_int(replayed.error_kind).is_equal(HegelResult.ErrorKind.DID_NOT_REPRODUCE)
 	assert_str(replayed.error).starts_with("Hegel.replay: the blob did not reproduce a failure.")
-	assert_str(replayed.report).is_empty()
+	_assert_error_report(replayed, HegelResult.ErrorKind.DID_NOT_REPRODUCE)
 
 
 func test_replay_drawing_past_the_blob_overruns_and_did_not_reproduce() -> void:

@@ -34,7 +34,7 @@ func test_sorting_puts_the_smallest_first() -> void:
 
 A case ends at its first failed `check`, failed `assume` or runtime error. From then on, `tc.draw` returns each generator's simplest value (0, `false`, `""`, the shortest list) without generating anything, so a body that carries on past the end runs on harmless values. Only the first event counts.
 
-`Hegel.run` returns a `HegelResult`: `passed`, the `failures`, an `error` if the run itself went wrong, and the `report`. A run with settings other than the defaults takes a `HegelSettings`, and the body can be a method:
+`Hegel.run` returns a `HegelResult`: `passed`, the `failures`, an `error` if the run itself went wrong, and the `report`, which explains any result that didn't pass: the failure reports, or the run's error. A run with settings other than the defaults takes a `HegelSettings`, and the body can be a method:
 
 ```gdscript
 func test_with_more_cases() -> void:
@@ -323,7 +323,7 @@ func test_abs_is_never_negative() -> void:
 	assert_bool(result.passed).override_failure_message(result.report).is_true()
 ```
 
-With `override_failure_message(result.report)`, the report shows in gdUnit4's failure message. gdUnit4 watches script errors itself, so a property failing on a script error also gets one gdUnit4 error per rerun while shrinking. [`examples/gdunit4/`](../examples/gdunit4/) has a complete suite.
+With `override_failure_message(result.report)`, the report shows in gdUnit4's failure message, and so does the error of a run that went wrong, such as an unsatisfiable `assume` or a replay that no longer fails. gdUnit4 watches script errors itself, so a property failing on a script error also gets one gdUnit4 error per rerun while shrinking. [`examples/gdunit4/`](../examples/gdunit4/) has a complete suite.
 
 **The plain runner.** Without a test framework, `addons/hegel/cli/run.gd` runs every `test_*` method in the scripts under the paths it is given, each on a new instance of its script:
 

@@ -52,7 +52,8 @@ class _Capture:
 ## [br][br]
 ## On a failure, the report ([member HegelResult.report]) is printed to stderr
 ## and a one-line error is pushed, so a test framework that watches errors,
-## like gdUnit4, fails the test. A run that ends in an error pushes its message.
+## like gdUnit4, fails the test. A run that ends in an error pushes its message,
+## which is also its report.
 ## [br][br]
 ## Failures are saved in the database ([member HegelSettings.database]) under
 ## the script and function calling [method run], and replayed first next time.
@@ -216,13 +217,17 @@ static func _report(
 	return "\n".join(lines)
 
 
-## Makes [param result] loud, unless the settings silence it.
+## Gives an errored [param result] its report, and makes [param result] loud
+## unless the settings silence it.
 static func _announced(result: HegelResult, settings: HegelSettings) -> HegelResult:
+	var errored := result.error_kind != HegelResult.ErrorKind.NONE
+	if errored:
+		var kind: String = HegelResult.ErrorKind.find_key(result.error_kind)
+		result.report = "Hegel run error (%s): %s" % [kind, result.error]
 	if settings._silent:
 		return result
-	if result.error_kind != HegelResult.ErrorKind.NONE:
-		var kind: String = HegelResult.ErrorKind.find_key(result.error_kind)
-		push_error("Hegel run error (%s): %s" % [kind, result.error])
+	if errored:
+		push_error(result.report)
 	elif not result.passed:
 		printerr(result.report)
 		var origins: PackedStringArray = []
