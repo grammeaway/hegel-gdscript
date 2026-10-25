@@ -4,8 +4,9 @@ extends RefCounted
 ## rejects the case through.
 ##
 ## [method Hegel.run] passes one to the body per test case. A case ends at its
-## first failed [method check], runtime error (a script error or
-## [method @GlobalScope.push_error]), failed [method assume], or when the engine
+## first failed [method check], runtime error (a script error, or a
+## [method @GlobalScope.push_error] outside [method expect_errors]), failed
+## [method assume], or when the engine
 ## abandons it. From then on, draws return each generator's simplest value
 ## without generating anything, so the body can return early:
 ## [codeblock]
@@ -39,6 +40,9 @@ var _draw_depth := 0
 ## Uses of each draw name, and the names already shown, for [method _display_name].
 var _name_counts := {}
 var _shown_names := {}
+## Open [method expect_errors] calls, and their errors, innermost last.
+var _expecting := 0
+var _expected: PackedStringArray = []
 
 
 func _init(native: HegelNativeTestCase, recording := false, echo := false) -> void:
@@ -98,6 +102,30 @@ func check(condition: bool, message := "") -> bool:
 func note(message: String) -> void:
 	if _records():
 		_record(message)
+
+
+## Calls [param fn] and returns the messages of the errors logged while it
+## ran ([method @GlobalScope.push_error] and the engine's own), which don't
+## fail the case. A script error in [param fn] still does. For properties of
+## code that reports bad input with an error:
+## [codeblock]
+## var errors := tc.expect_errors(func() -> void: inventory.remove(item))
+## tc.check(errors.size() == 1, "removing a missing item is an error")
+## [/codeblock]
+## Errors from other threads count while [param fn] runs. In nested calls,
+## an error belongs to the innermost. Godot still prints each error.
+func expect_errors(fn: Callable) -> PackedStringArray:
+	_lock.lock()
+	var start := _expected.size()
+	_expecting += 1
+	_lock.unlock()
+	fn.call()
+	_lock.lock()
+	_expecting -= 1
+	var errors := _expected.slice(start)
+	_expected.resize(start)
+	_lock.unlock()
+	return errors
 
 
 ## Nothing is recorded after the terminal event, since upstream's body stops there.
@@ -184,9 +212,16 @@ func _reopen() -> bool:
 	return rejected
 
 
-## Fails the case for a runtime error, as its terminal event.
-func _fail_with_error(origin: String, failure: String) -> void:
-	_end(HegelNativeTestCase.STATUS_INTERESTING, origin, failure)
+## Collects a runtime error's [param message] inside [method expect_errors],
+## unless it's a script error; otherwise fails the case, as its terminal event.
+func _on_error(script_error: bool, message: String, origin: String, failure: String) -> void:
+	_lock.lock()
+	var expected := _expecting > 0 and not script_error
+	if expected:
+		_expected.append(message)
+	_lock.unlock()
+	if not expected:
+		_end(HegelNativeTestCase.STATUS_INTERESTING, origin, failure)
 
 
 ## Ends the case, and the run with it, with an error rather than a verdict.

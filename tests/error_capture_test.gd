@@ -99,6 +99,47 @@ func test_error_between_runs_is_not_captured() -> void:
 	assert_bool(outcome.next_passed).is_true()
 
 
+func test_expect_errors_collects_a_push_error_instead_of_failing() -> void:
+	var outcome := _scenario("expected_push_error")
+	assert_bool(outcome.passed).is_true()
+	assert_str(outcome.error).is_empty()
+	assert_int(outcome.collected.size()).is_equal(1)
+	assert_str(outcome.collected[0] if outcome.collected else "").starts_with("bad input ")
+
+
+func test_script_error_inside_expect_errors_still_fails_the_case() -> void:
+	var outcome := _scenario("script_error_in_expect_errors")
+	var site := _site(outcome)
+	assert_array(outcome.origins).is_equal(["script error: " + site])
+	assert_array(outcome.collected).is_empty()
+
+
+func test_push_error_after_expect_errors_returns_fails_the_case() -> void:
+	var outcome := _scenario("push_error_after_expect_errors")
+	assert_array(outcome.origins).is_equal(["error: " + _site(outcome)])
+	assert_array(outcome.collected).is_equal(["expected"])
+
+
+func test_expect_errors_collects_an_engine_error() -> void:
+	var outcome := _scenario("expected_engine_error")
+	assert_bool(outcome.passed).is_true()
+	assert_int(outcome.collected.size()).is_equal(1)
+	assert_str(outcome.collected[0] if outcome.collected else "").contains("missing")
+
+
+func test_expect_errors_collects_an_error_from_a_joined_thread() -> void:
+	var outcome := _scenario("expected_error_from_a_thread")
+	assert_bool(outcome.passed).is_true()
+	assert_int(outcome.collected.size()).is_equal(1)
+	assert_str(outcome.collected[0] if outcome.collected else "").starts_with("thread ")
+
+
+func test_nested_expect_errors_each_return_their_own() -> void:
+	var outcome := _scenario("nested_expect_errors")
+	assert_bool(outcome.passed).is_true()
+	assert_array(outcome.collected).is_equal(["outer 1", "outer 2", "inner"])
+
+
 func test_error_in_a_thread_the_body_joins_fails_the_case() -> void:
 	var outcome := _scenario("in_a_thread")
 	var site := _site(outcome)

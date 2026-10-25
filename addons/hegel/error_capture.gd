@@ -1,7 +1,8 @@
 extends Logger
-## Internal: makes an error Godot logs while a test body runs that case's
-## terminal event (D11). Script errors and errors ([method @GlobalScope.push_error]
-## and the engine's own) fail the case; warnings don't.
+## Internal: hands each error Godot logs while a test body runs to that case,
+## which fails on it (D11) or collects it for [method HegelTestCase.expect_errors].
+## Script errors and errors ([method @GlobalScope.push_error] and the engine's
+## own) count; warnings don't.
 
 # shortcut: an error from any thread counts against the body running at the
 # time, so concurrent runs on several threads catch each other's errors; filter
@@ -59,10 +60,8 @@ func _log_error(
 					]
 				)
 			)
-	var failure := (
-		"%s: %s (%s)"
-		% ["Script error" if script_error else "Error", rationale if rationale else code, location]
-	)
+	var message := rationale if rationale else code
+	var failure := "%s: %s (%s)" % ["Script error" if script_error else "Error", message, location]
 	if frames:
 		failure += "\n" + "\n".join(frames)
 	# The message stays out of the origin: it carries values, and the same
@@ -70,7 +69,7 @@ func _log_error(
 	var origin := ("script error: " if script_error else "error: ") + location
 	_lock.lock()
 	if _case:
-		_case._fail_with_error(origin, failure)
+		_case._on_error(script_error, message, origin, failure)
 	_lock.unlock()
 
 

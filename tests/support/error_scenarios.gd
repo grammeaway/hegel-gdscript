@@ -168,6 +168,86 @@ func error_in_a_rule() -> Dictionary:
 	)
 
 
+## Every case expects the error its input provokes, and checks the message.
+func expected_push_error() -> Dictionary:
+	return _expecting(
+		func(tc: HegelTestCase) -> PackedStringArray:
+			var x: int = tc.draw(Gs.integers(0, 10))
+			var errors := tc.expect_errors(func() -> void: push_error("bad input ", x))
+			tc.check(errors == PackedStringArray(["bad input %d" % x]), "the error is collected")
+			return errors
+	)
+
+
+func script_error_in_expect_errors() -> Dictionary:
+	return _expecting(
+		func(tc: HegelTestCase) -> PackedStringArray:
+			var x: int = tc.draw(Gs.integers(0, 10))
+			return tc.expect_errors(func() -> void: _inner(x))
+	)
+
+
+func push_error_after_expect_errors() -> Dictionary:
+	return _expecting(
+		func(tc: HegelTestCase) -> PackedStringArray:
+			var errors := tc.expect_errors(func() -> void: push_error("expected"))
+			_mark()
+			push_error("after ", tc.draw(Gs.integers(0, 10)))
+			return errors
+	)
+
+
+func expected_engine_error() -> Dictionary:
+	return _expecting(
+		func(tc: HegelTestCase) -> PackedStringArray:
+			tc.draw(Gs.integers(0, 10))
+			var node := Node.new()
+			var errors := tc.expect_errors(func() -> void: node.get_node("missing"))
+			node.free()
+			return errors
+	)
+
+
+func expected_error_from_a_thread() -> Dictionary:
+	return _expecting(
+		func(tc: HegelTestCase) -> PackedStringArray:
+			var x: int = tc.draw(Gs.integers(0, 10))
+			return tc.expect_errors(
+				func() -> void:
+					var thread := Thread.new()
+					thread.start(func() -> void: push_error("thread ", x))
+					thread.wait_to_finish()
+			)
+	)
+
+
+## Returns the outer call's errors, then the inner's.
+func nested_expect_errors() -> Dictionary:
+	return _expecting(
+		func(tc: HegelTestCase) -> PackedStringArray:
+			tc.draw(Gs.integers(0, 10))
+			var inner: PackedStringArray = []
+			var outer := tc.expect_errors(
+				func() -> void:
+					push_error("outer 1")
+					inner.append_array(tc.expect_errors(func() -> void: push_error("inner")))
+					push_error("outer 2")
+			)
+			return outer + inner
+	)
+
+
+## Runs [param body], which returns what its expect_errors collected, and adds
+## the last case's to the summary as [code]collected[/code].
+func _expecting(body: Callable) -> Dictionary:
+	var collected: Array[PackedStringArray] = [PackedStringArray()]
+	var outcome := _summary(
+		Hegel.run(func(tc: HegelTestCase) -> void: collected[0] = body.call(tc), _quiet())
+	)
+	outcome.collected = collected[0]
+	return outcome
+
+
 func _outer(x: int) -> void:
 	_inner(x)
 

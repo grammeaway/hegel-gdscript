@@ -167,6 +167,31 @@ Godot prints every error to stderr as it happens, so a failure caused by an erro
 
 Prefer `tc.check` over `assert()`: a failed `check` names its message in the report, and `assert()` does nothing outside debug builds.
 
+**Expected errors.** Code under test often reports bad input with `push_error`. To test that path, call it through `tc.expect_errors`: it returns the messages of the errors logged while its function ran, instead of failing the case, so the property can check them.
+
+```gdscript
+class Inventory:
+	var items: Array[String] = []
+
+	func remove(item: String) -> void:
+		if item not in items:
+			push_error("no %s in the inventory" % item)
+			return
+		items.erase(item)
+
+
+func test_removing_a_missing_item_is_an_error() -> void:
+	Hegel.run(func(tc: HegelTestCase) -> void:
+		var item: String = tc.draw(Gs.sampled_from(["sword", "shield"]), "item")
+		var errors := tc.expect_errors(func() -> void: Inventory.new().remove(item))
+		tc.check(errors == PackedStringArray(["no %s in the inventory" % item]), "one error, naming the item")
+	)
+```
+
+Errors from threads the function starts count too. A script error inside the function still fails the case, as does an error after it returns. Godot still prints the expected errors, and gdUnit4 still fails the test on them when its `gdunit4/settings/report/godot/push_error` setting is on.
+
+Don't mute expected errors with `Engine.print_error_messages = false` instead: it stops Godot passing errors to the addon too, so a script error in the muted code goes unseen.
+
 ## Determinism
 
 Take every random choice from `tc`, never from `randi()`, `randf()` or an unseeded `RandomNumberGenerator`. The engine replays and shrinks a case by replaying its draws; randomness it doesn't control makes a failure flaky, and the shrunk case may not fail. When the code under test takes a `RandomNumberGenerator`, draw a seeded one (see [Recipes](#recipes)).

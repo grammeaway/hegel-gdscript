@@ -34,9 +34,9 @@ D4: `tc.expect_errors(fn: Callable) -> PackedStringArray`.
 
 ## Completion
 
-- [ ] Each scenario's check passes, and fails with the feature broken: collect script errors too, then don't collect at all. Restore it.
-- [ ] The guide snippet runs under `tests/docs_test.gd`.
-- [ ] `just check` green.
+- [x] Each scenario's check passes, and fails with the feature broken: collect script errors too, then don't collect at all. Restore it.
+- [x] The guide snippet runs under `tests/docs_test.gd`.
+- [x] `just check` green. CI's floor job (Godot 4.5) is left to the owner's push.
 
 ## Non-goals
 
