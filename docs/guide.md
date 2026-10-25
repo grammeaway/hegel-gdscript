@@ -77,6 +77,32 @@ Every generator also has:
 - `filter(predicate)`: only the values `predicate` accepts. Each draw tries three values before rejecting the case, so a predicate that rejects most values fails a health check. Generate the values directly where you can.
 - `flat_map(f)`: draws a value, then draws from the generator `f` returns for it.
 
+**Typed arrays.** `lists` and `tuples` draw untyped Arrays, and assigning one to a typed variable, `var words: Array[String] = tc.draw(Gs.lists(Gs.text()))`, is a script error, so every case fails on that line. Draw into the typed Array with `assign`, or `map` the generator to a typed Array:
+
+```gdscript
+static func typed_words() -> HegelGenerator:
+	return Gs.lists(Gs.text_from("abc", 1)).map(
+		func(xs: Array) -> Array[String]: return Array(xs, TYPE_STRING, &"", null)
+	)
+
+
+func test_joined_words_split_back() -> void:
+	Hegel.run(func(tc: HegelTestCase) -> void:
+		var words: Array[String] = []
+		words.assign(tc.draw(Gs.lists(Gs.text_from("abc", 1)), "words"))
+		tc.check(" ".join(words).split(" ", false) == PackedStringArray(words), "the words split back")
+	)
+
+
+func test_mapped_words_split_back() -> void:
+	Hegel.run(func(tc: HegelTestCase) -> void:
+		var words: Array[String] = tc.draw(typed_words(), "words")
+		tc.check(" ".join(words).split(" ", false) == PackedStringArray(words), "the words split back")
+	)
+```
+
+The same goes for a typed Dictionary drawn from `dictionaries`: `assign` it into one.
+
 `composite` builds a value from several draws, where later draws can depend on earlier ones:
 
 ```gdscript
@@ -136,7 +162,16 @@ Each test's failures are kept under its own key: the script and function of the 
 - `development` locally: 100 test cases, a fresh seed each run, the database on.
 - `ci` when it detects a CI server (`CI`, `GITHUB_ACTIONS` and the like): derandomized, so every run is the same, with the database off and the `TOO_SLOW` health check suppressed.
 
-`HEGEL_TEST_CASES`, `HEGEL_SEED`, `HEGEL_DERANDOMIZE` and `HEGEL_DATABASE` (a path, or `disabled`) apply over the profile, and a field you set in code wins over all of them. Profiles can also be configured in a `hegel.toml` in the working directory or above it; see Hegel's documentation.
+`HEGEL_TEST_CASES`, `HEGEL_SEED`, `HEGEL_DERANDOMIZE` and `HEGEL_DATABASE` (a path, or `disabled`) apply over the profile, and a field you set in code wins over all of them. So a test that needs more cases than the rest should scale the profile's value, `settings.test_cases *= 10`, rather than replace it, and `HEGEL_TEST_CASES` still scales it.
+
+Profiles are configured, and new ones defined, in a `hegel.toml` in the project's root or a directory above it: Godot runs from the project's root, even when started elsewhere with `--path`. A profile for nightly runs:
+
+```toml
+[profiles.nightly]
+test_cases = 1000
+```
+
+Run the tests with `HEGEL_DEFAULT_PROFILE=nightly` to use it: each run starts from 1000 cases, and a test with `settings.test_cases *= 10` runs 10000. A new profile builds on `ci` on a CI server and on `development` elsewhere. See Hegel's documentation for the other settings.
 
 **Several failures.** By default the engine reports only the smallest failure it found. With `settings.report_multiple_failures = true` it reports one per distinct origin: each failed `check` line and each error location is a different bug.
 
@@ -353,7 +388,7 @@ func test_abs_is_never_negative() -> void:
 	assert_bool(result.passed).override_failure_message(result.report).is_true()
 ```
 
-With `override_failure_message(result.report)`, the report shows in gdUnit4's failure message, and so does the error of a run that went wrong, such as an unsatisfiable `assume` or a replay that no longer fails. gdUnit4 watches script errors itself, so a property failing on a script error also gets one gdUnit4 error per rerun while shrinking. [`examples/gdunit4/`](../examples/gdunit4/) has a complete suite.
+With `override_failure_message(result.report)`, the report shows in gdUnit4's failure message, and so does the error of a run that went wrong, such as an unsatisfiable `assume` or a replay that no longer fails. gdUnit4 watches script errors itself, so a property failing on a script error also gets one gdUnit4 error per rerun while shrinking. After a failing run's report, Godot prints a backtrace about 20 frames deep, mostly gdUnit4's: it belongs to the one-line error the run pushes, and the report above it is the part to read. [`examples/gdunit4/`](../examples/gdunit4/) has a complete suite.
 
 **The plain runner.** Without a test framework, `addons/hegel/cli/run.gd` runs every `test_*` method in the scripts under the paths it is given, each on a new instance of its script:
 
@@ -372,4 +407,5 @@ A test fails when it logs an error outside a property body: a failing `Hegel.run
 - **The debugger.** With a debugger attached, Godot breaks at every script error in a body, and the engine reruns a failing case several times while shrinking it. Continue past each break, and the run reports the failure as usual; or turn on **Ignore Error Breaks** in the editor's Debugger panel, and the run doesn't stop at all. A failed `check` and `push_error` don't break.
 - **Float literals.** Godot parses some float literals loosely: `5e-324` reads as 0.0, some 17-digit literals land one ulp off, and `-0.0` in an Array literal becomes 0.0. A bound written that way is the value Godot parsed.
 - **Text.** `text()` never draws U+0000, which a Godot String can't hold.
+- **Typed collections.** Generators draw untyped Arrays and Dictionaries; `assign` them into typed ones (see [Generators](#generators)).
 - **Reports.** A drawn Dictionary is shown over several lines.

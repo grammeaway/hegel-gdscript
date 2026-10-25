@@ -11,7 +11,7 @@ Live log for `README.md`'s plans. One row per plan; details under Deviations and
 | p3 draw name validation | done | `c8f9b2b` | Tests in `tests/test_case_test.gd` |
 | p4 expected errors | done | `7a96b8e` | `HegelTestCase._on_error` decides: collect or end |
 | p5 text alphabet | done | `4b10e2d` | A `text_from` `#[func]` beside `text`, over one private `build` |
-| p6 docs round | planned | | |
+| p6 docs round | done | `712bdb9` | Profile recipe probed: `hegel.toml` goes in the project's root |
 
 ## Decisions
 
@@ -26,6 +26,8 @@ Decisions taken during passes, with who took them (owner or agent) and when. Pla
 - **p4, agent, 2026-10-25:** the capture hands every error to the case's `_on_error(script_error, message, origin, failure)`, which replaces `_fail_with_error`; the case collects under its `Mutex`. Nesting is one `PackedStringArray` and an open-call count: each call returns the slice past where it started, and truncates it back. An error's message is the report's (`rationale`, else `code`). The guide's subsection is a bold-lead paragraph under Runtime errors, as the guide's other subsections are, and also says gdUnit4's `report/godot/push_error` setting still counts expected errors. The `CHANGELOG.md` entry sits in `Added`, marked new since `v0.1.0-rc.1`.
 
 - **p5, agent, 2026-10-25:** natively, a second `#[func]`, `text_from(alphabet, min_size, max_size)`, beside `text`; both go through one private `build` that frees the old handle and makes the one `hegel_string_generator_text` call, with an empty non-NULL category list and `alphabet` as `include_characters` for `text_from`. An empty alphabet with `min_size` 0 goes to the engine with `max_size` 0, which it accepts, so the generator keeps `text`'s label; Python returns `just("")` instead, since the engine rejects an empty alphabet whenever `max_size > 0`. With `min_size > 0` the engine's rejection (`No valid characters…`) is the usage error, as Python rejects it too, so engine and upstream agree and nothing goes under Found. The simplest character is the alphabet's lowest at or above `"0"`, else its highest, read from the engine's shrink order (`libhegel/src/native/intervalsets.rs`, `char_in_shrink_order`) and confirmed with `minimal` on `"ba"`, `"]=["`, `"#!"` and `"z9!"`.
+
+- **p6, agent, 2026-10-25:** no `CHANGELOG.md` entry: the change is to the guide and `AGENTS.md`, neither shipped in the package nor user-visible behaviour. The typed-array section sits in Generators after `map`, since one form uses it, and shows each form as its own test of the same property; one prose line says a typed Dictionary takes `assign` too (probed: direct assignment is the same script error, `assign` passes). The broken form is a prose sentence, not a `fails` block.
 
 ## Deviations
 
@@ -61,6 +63,17 @@ Per plan: where the work differed from the plan, and why.
 - Red against a stub `text_from` that returned `text(min_size, max_size)`: every new test failed but `test_text_from_reaches_every_character_of_its_alphabet`, since unrestricted text reaches `=`, `[` and the rest within 300 cases. It pins reachability; exclusion is the alphabet test's job. With the feature in, all pass. Passing NULL categories turned the alphabet, empty-alphabet, quality and native tests red; dropping `include_characters` turned every `text_from` test red; taking the alphabet's first character as the simplest turned the terminal-event test red; dropping the empty-alphabet `max_size = 0` turned the empty-alphabet test red. Restored.
 - Also a native smoke test, `test_string_draws_from_an_alphabet`, beside `test_string_draws`.
 - The guide line names the case: `text` rarely draws a given ASCII character, then the `one_of` example, inline rather than as a block, since it isn't a whole test.
+
+**p6**
+
+- Profile recipe, run with a probe script under `godot --headless --path <project> -s <script>`, a `hegel.toml` holding `[profiles.nightly]` / `test_cases = 1000`, and `HEGEL_DEFAULT_PROFILE=nightly`:
+  - `hegel.toml` beside the shell's working directory, outside the project: `HegelSettings.new()` fails to resolve (`unknown settings profile "nightly"`), `test_cases` reads 0, and the run is a usage error. Godot changes its working directory to the project's root under `--path`, so the engine's upward search starts there.
+  - `hegel.toml` in the project's root, Godot started from `/tmp`: `test_cases` 1000, `*= 2` gives 2000, and the run ran 2000 cases. Same from the project's root without `--path`, and with the file one directory above the project.
+  - Adding `HEGEL_TEST_CASES=50`: 50, doubled to 100, 100 cases run. Without a profile or file: 100 and 200.
+  - The guide is written from these: the file goes in the project's root or above, and `*=` scales whichever base the profile and environment give.
+- Red: assigning the drawn list directly in the `assign` snippet turned `test_plain_snippets_pass` red with the planning probe's script error; so did mapping to an untyped `Array` in the `map` snippet. Restored.
+- The gdUnit4 line was checked against `examples/gdunit4/`: 21 frames after the report, 17 of them gdUnit4's, as the planning probe found. The guide says "about 20 frames deep, mostly gdUnit4's".
+- `AGENTS.md` also says why the tag itself won't do: it has no `frontends/cpp/`.
 
 ## Found
 

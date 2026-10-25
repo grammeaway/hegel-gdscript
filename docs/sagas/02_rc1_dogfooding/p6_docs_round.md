@@ -24,9 +24,9 @@ Four items whose fix is documentation:
 
 ## Completion
 
-- [ ] The profile recipe was run, and `progress.md` records what was seen.
-- [ ] Break a typed-array snippet (assign directly): `tests/docs_test.gd` goes red. Restore it.
-- [ ] `just check` green.
+- [x] The profile recipe was run, and `progress.md` records what was seen.
+- [x] Break a typed-array snippet (assign directly): `tests/docs_test.gd` goes red. Restore it.
+- [x] `just check` green.
 
 ## Non-goals
 

@@ -74,7 +74,7 @@ docs/sagas/          plans and their progress logs
 
 **The engine is the authority.** When libhegel behaves differently from upstream's frontends or Hypothesis, record it in the saga's Found section and ask the owner. Keep workarounds out of the addon.
 
-**Upstream is the reference.** Before designing a behaviour, read how `/tmp/hegel/frontends/python/python/hegel/` and `/tmp/hegel/frontends/cpp/` do it, and read `libhegel/include/hegel.h`. If `/tmp/hegel` is missing, clone `https://github.com/hegeldev/hegel` at tag `libhegel/0.48.0`. Copy their semantics, in GDScript idioms.
+**Upstream is the reference.** Before designing a behaviour, read how `/tmp/hegel/frontends/python/python/hegel/` and `/tmp/hegel/frontends/cpp/` do it, and read `libhegel/include/hegel.h`. If `/tmp/hegel` is missing, clone `https://github.com/hegeldev/hegel` and check out `5195b0b`, whose `libhegel/` matches tag `libhegel/0.48.0` (the tag itself has no `frontends/cpp/`). Copy their semantics, in GDScript idioms.
 
 ## Code style
 
