@@ -1,0 +1,22 @@
+--- Failure: res://tests/subjects/state_machine.gd::_run ---
+Falsified after 2 test cases (0 discarded):
+
+  Checking invariants on the initial state.
+  Step 1: add {
+    var amount = 3
+  }
+  Step 2: add {
+    var amount = 9
+  }
+  Invariant below_12 failed:
+
+Check failed: count < 12 (res://tests/subjects/state_machine.gd:13)
+Reproduce with: Hegel.replay("[blob]", <body>)
+ERROR: Hegel: property failed at check: res://tests/subjects/state_machine.gd:13; the report is above
+   at: push_error ([godot])
+   GDScript backtrace (most recent call first):
+       [0] _announced (res://addons/hegel/hegel.gd)
+       [1] _guarded (res://addons/hegel/hegel.gd)
+       [2] run (res://addons/hegel/hegel.gd)
+       [3] _run (res://tests/subjects/state_machine.gd:17)
+       [4] _initialize (res://tests/support/subject.gd:9)

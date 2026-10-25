@@ -1,4 +1,5 @@
 use crate::collection::HegelNativeCollection;
+use crate::state_machine::HegelNativeStateMachine;
 use crate::string_generator::HegelNativeStringGenerator;
 use crate::{Outcome, call, hstr, out_of_range, string_from};
 use godot::prelude::*;
@@ -158,6 +159,101 @@ impl HegelNativeTestCase {
         self.record(call(|ctx| unsafe {
             c::hegel_collection_reject(ctx, tc, collection, ptr::null())
         }))
+    }
+
+    /// A sequential machine (concurrency 1, one group, equal weights, every
+    /// invariant sampled) running at most `step_count` rules, or null on
+    /// failure.
+    #[func]
+    fn new_state_machine(
+        &mut self,
+        rule_names: PackedStringArray,
+        invariant_names: PackedStringArray,
+        step_count: i64,
+    ) -> Option<Gd<HegelNativeStateMachine>> {
+        let rules: Vec<String> = rule_names
+            .as_slice()
+            .iter()
+            .map(|s| s.to_string())
+            .collect();
+        let invariants: Vec<String> = invariant_names
+            .as_slice()
+            .iter()
+            .map(|s| s.to_string())
+            .collect();
+        let rule_strs: Vec<c::hegel_string_t> = rules.iter().map(|s| hstr(s)).collect();
+        let invariant_strs: Vec<c::hegel_string_t> = invariants.iter().map(|s| hstr(s)).collect();
+        let groups = vec![0i64; rules.len()];
+        let tc = self.raw;
+        let mut raw = ptr::null_mut();
+        let mut concurrency = 0i64;
+        self.record(call(|ctx| unsafe {
+            c::hegel_new_state_machine(
+                ctx,
+                tc,
+                rule_strs.as_ptr(),
+                groups.as_ptr(),
+                ptr::null(),
+                rule_strs.len(),
+                invariant_strs.as_ptr(),
+                ptr::null(),
+                invariant_strs.len(),
+                1,
+                1,
+                step_count,
+                &mut raw,
+                &mut concurrency,
+            )
+        }));
+        (!raw.is_null()).then(|| Gd::from_object(HegelNativeStateMachine { raw }))
+    }
+
+    /// The next round's group id (always 0), or `HegelNative.STATE_MACHINE_DONE`
+    /// when the machine is done or on failure.
+    #[func]
+    fn state_machine_next_group(&mut self, machine: Gd<HegelNativeStateMachine>) -> i64 {
+        let (tc, machine) = (self.raw, machine.bind().raw);
+        let mut out = c::HEGEL_STATE_MACHINE_DONE;
+        self.record(call(|ctx| unsafe {
+            c::hegel_state_machine_next_group(ctx, tc, machine, &mut out)
+        }));
+        out
+    }
+
+    /// The index of the next rule to run, or `HegelNative.STATE_MACHINE_DONE`
+    /// when the round is over or on failure.
+    #[func]
+    fn state_machine_next_rule(&mut self, machine: Gd<HegelNativeStateMachine>) -> i64 {
+        let (tc, machine) = (self.raw, machine.bind().raw);
+        let mut out = c::HEGEL_STATE_MACHINE_DONE;
+        self.record(call(|ctx| unsafe {
+            c::hegel_state_machine_next_rule(ctx, tc, machine, 0, &mut out)
+        }));
+        out
+    }
+
+    /// Reports that the rule just returned stopped at a failed assumption.
+    #[func]
+    fn state_machine_rule_rejected(&mut self, machine: Gd<HegelNativeStateMachine>) -> i64 {
+        let (tc, machine) = (self.raw, machine.bind().raw);
+        self.record(call(|ctx| unsafe {
+            c::hegel_state_machine_rule_rejected(ctx, tc, machine, 0)
+        }))
+    }
+
+    /// Whether to check invariant `index` at this point; false on failure.
+    #[func]
+    fn state_machine_should_check_invariant(
+        &mut self,
+        machine: Gd<HegelNativeStateMachine>,
+        index: i64,
+    ) -> bool {
+        let (tc, machine) = (self.raw, machine.bind().raw);
+        let mut out = false;
+        self.record(call(|ctx| unsafe {
+            c::hegel_state_machine_should_check_invariant(ctx, tc, machine, index, &mut out)
+        }));
+        out
     }
 
     /// `label` is a u64 bit-cast to int, from `HegelNative.label_*`.

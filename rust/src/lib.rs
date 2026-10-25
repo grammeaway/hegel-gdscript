@@ -11,6 +11,7 @@ use std::ffi::c_char;
 mod collection;
 mod run;
 mod settings;
+mod state_machine;
 mod string_generator;
 mod test_case;
 
@@ -116,6 +117,9 @@ impl HegelNative {
     const E_RETRY: i64 = Rc::HEGEL_E_RETRY as i64;
     #[constant]
     const E_NOT_FOUND: i64 = Rc::HEGEL_E_NOT_FOUND as i64;
+    /// The `state_machine_next_*` result when there is nothing more to run.
+    #[constant]
+    const STATE_MACHINE_DONE: i64 = c::HEGEL_STATE_MACHINE_DONE;
 
     /// libhegel's version string.
     #[func]

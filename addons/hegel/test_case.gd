@@ -33,6 +33,8 @@ var _lines: PackedStringArray = []
 var _recording: bool
 ## Whether recorded lines are also printed as they happen.
 var _echo: bool
+## Prefixes recorded lines, nesting a state machine step's draws under it.
+var _indent := ""
 var _draw_depth := 0
 ## Uses of each draw name, and the names already shown, for [method _display_name].
 var _name_counts := {}
@@ -98,9 +100,30 @@ func _records() -> bool:
 
 
 func _record(line: String) -> void:
-	_lines.append(line)
+	var indented := _indent + line.replace("\n", "\n" + _indent)
+	_lines.append(indented)
 	if _echo:
-		printerr(line)
+		printerr(indented)
+
+
+## Calls [param step] with this case, as upstream's child test case: its lines
+## nested one level in, and its draws named afresh. For a state machine's steps.
+func _call_nested(step: Callable) -> void:
+	var outer := [_indent, _name_counts, _shown_names]
+	_indent += "  "
+	_name_counts = {}
+	_shown_names = {}
+	step.call(self)
+	_indent = outer[0]
+	_name_counts = outer[1]
+	_shown_names = outer[2]
+
+
+## Records [param line] even after the terminal event, for a state machine's
+## lines closing the step that failed, as upstream notes them while unwinding.
+func _note_always(line: String) -> void:
+	if _recording:
+		_record(line)
 
 
 ## Upstream's draw names: an unnamed draw counts up from [code]draw_1[/code];
@@ -132,6 +155,27 @@ func _end(status: int, origin: String, failure := "") -> bool:
 		_failure = failure
 	_lock.unlock()
 	return first
+
+
+## Whether the case has failed: a failed check or a runtime error.
+func _failed() -> bool:
+	return _ended and _status == HegelNativeTestCase.STATUS_INTERESTING
+
+
+## Undoes a rejection, which in a state machine rejects only the step, and
+## returns whether there was one to undo.
+func _reopen() -> bool:
+	_lock.lock()
+	var rejected := (
+		_ended
+		and _status == HegelNativeTestCase.STATUS_INVALID
+		and _run_error_kind == HegelResult.ErrorKind.NONE
+	)
+	if rejected:
+		_ended = false
+		_status = HegelNativeTestCase.STATUS_VALID
+	_lock.unlock()
+	return rejected
 
 
 ## Fails the case for a runtime error, as its terminal event.
@@ -211,6 +255,14 @@ func _collection(min_size: int, max_size: int) -> _Collection:
 	return _Collection.new(self, min_size, max_size)
 
 
+## A sequential state machine over rules and invariants by name, running at
+## most [param steps] rules.
+func _state_machine(
+	rules: PackedStringArray, invariants: PackedStringArray, steps: int
+) -> _StateMachine:
+	return _StateMachine.new(self, rules, invariants, steps)
+
+
 ## The smallest float above [param x], as the engine steps an excluded bound.
 static func _next_up(x: float) -> float:
 	if is_nan(x) or x == INF:
@@ -279,6 +331,49 @@ class _Collection:
 			return
 		_tc._native.collection_reject(_native)
 		_tc._call_ok("collection_reject")
+
+
+## The engine chooses the rules. Once the case has ended the machine is done.
+class _StateMachine:
+	var _tc: HegelTestCase
+	var _native: HegelNativeStateMachine
+
+	func _init(
+		tc: HegelTestCase, rules: PackedStringArray, invariants: PackedStringArray, steps: int
+	) -> void:
+		_tc = tc
+		if not tc._ended:
+			_native = tc._native.new_state_machine(rules, invariants, steps)
+			tc._call_ok("new_state_machine")
+
+	## Whether to run another round.
+	func next_group() -> bool:
+		if _tc._ended:
+			return false
+		var group := _tc._native.state_machine_next_group(_native)
+		return _tc._call_ok("state_machine_next_group") and group != HegelNative.STATE_MACHINE_DONE
+
+	## The index of the round's next rule, or -1 when the round is over.
+	func next_rule() -> int:
+		if _tc._ended:
+			return -1
+		var rule := _tc._native.state_machine_next_rule(_native)
+		if not _tc._call_ok("state_machine_next_rule") or rule == HegelNative.STATE_MACHINE_DONE:
+			return -1
+		return rule
+
+	## Tells the engine the rule just run stopped at a failed assumption.
+	func rule_rejected() -> void:
+		if not _tc._ended:
+			_tc._native.state_machine_rule_rejected(_native)
+			_tc._call_ok("state_machine_rule_rejected")
+
+	## Whether to check invariant [param index] after this round.
+	func should_check_invariant(index: int) -> bool:
+		if _tc._ended:
+			return false
+		var check := _tc._native.state_machine_should_check_invariant(_native, index)
+		return _tc._call_ok("state_machine_should_check_invariant") and check
 
 
 ## Turns a failed engine call into the case's terminal event.

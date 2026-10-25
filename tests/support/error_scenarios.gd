@@ -146,6 +146,28 @@ func in_a_thread() -> Dictionary:
 	)
 
 
+## A rule that fills one slot per step, and runs out on the third.
+class _Slots:
+	extends HegelStateMachine
+	var slots := [0, 0]
+	var count := 0
+	var scenarios: Object
+
+	func _init(owner: Object) -> void:
+		scenarios = owner
+
+	func rule_fill(_tc: HegelTestCase) -> void:
+		scenarios._mark()
+		slots[count] = 1
+		count += 1
+
+
+func error_in_a_rule() -> Dictionary:
+	return _summary(
+		Hegel.run(func(tc: HegelTestCase) -> void: _Slots.new(self).run(tc), _quiet())
+	)
+
+
 func _outer(x: int) -> void:
 	_inner(x)
 
