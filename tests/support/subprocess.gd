@@ -7,6 +7,9 @@ const _PATTERNS := [
 	['Hegel\\.replay\\("[^"]+"', 'Hegel.replay("[blob]"'],
 	["at: (\\w+) \\((?!res://)[^)]*\\)", "at: $1 ([godot])"],
 	["(res://addons/hegel/[\\w/]+\\.gd):\\d+", "$1"],
+	# Godot's Linux and macOS builds indent a SCRIPT ERROR's lines further than Windows does.
+	["(?m)^ +(at: |GDScript backtrace)", "   $1"],
+	["(?m)^ +(\\[\\d+\\] )", "       $1"],
 ]
 
 
