@@ -27,4 +27,4 @@ test:
 lint:
     cd rust && cargo fmt --check
     cd rust && cargo clippy --release -- -D warnings
-    uvx --from gdtoolkit==4.5.0 gdlint addons/hegel tests
+    uvx --from gdtoolkit==4.5.0 gdlint addons/hegel tests examples

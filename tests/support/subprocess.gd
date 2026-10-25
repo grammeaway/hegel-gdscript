@@ -30,6 +30,30 @@ static func run(script: String, user_args: PackedStringArray = []) -> Outcome:
 	return outcome
 
 
+## Runs gdUnit4's command-line tool headless on [param path], a suite or a
+## directory of them, with its colour codes stripped from the output. gdUnit4
+## reads its options before [method run]'s "--", so it can't go through it.
+static func run_gdunit4(path: String) -> Outcome:
+	var args: PackedStringArray = [
+		"--headless",
+		"--path",
+		ProjectSettings.globalize_path("res://"),
+		"-s",
+		"res://addons/gdUnit4/bin/GdUnitCmdTool.gd",
+		"--ignoreHeadlessMode",
+		"-c",
+		"-a",
+		path,
+		"-rd",
+		"user://gdunit4_nested_reports",
+	]
+	var output := []
+	var outcome := Outcome.new()
+	outcome.exit_code = OS.execute(OS.get_executable_path(), args, output, true)
+	outcome.output = RegEx.create_from_string("\u001b\\[[0-9;]*m").sub("".join(output), "", true)
+	return outcome
+
+
 ## [param text] without what varies between runs and machines: the banner,
 ## blobs, absolute paths, Godot's source locations, and the addon's line numbers.
 static func scrub(text: String) -> String:

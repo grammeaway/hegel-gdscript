@@ -232,6 +232,14 @@ static func _announced(result: HegelResult, settings: HegelSettings) -> HegelRes
 	return result
 
 
+## Whether a run is in progress on any thread, for the plain runner.
+static func _in_progress() -> bool:
+	_lock.lock()
+	var running := not _running.is_empty()
+	_lock.unlock()
+	return running
+
+
 ## [code]<script>::<function>[/code] of the code calling the caller of this
 ## function, or "" without a stack (in a release build, say).
 static func _caller_key() -> String:

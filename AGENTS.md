@@ -11,7 +11,7 @@ Run everything through `just`. Godot 4.7.2 is `godot` on PATH; set `GODOT` to us
 - `just build`: `cargo build --release`, then copy the library into `addons/hegel/bin/` under its platform name. Always the release profile: a debug build is 150 MB.
 - `just import`: the headless Godot import. Run it on a fresh checkout and after adding or renaming a `class_name`, or tests can't see the class.
 - `just test`: every gdUnit4 suite under `tests/`, headless. Exit 0 is green. The two `Remote Debugger` errors at the start are expected: `runtest.sh` points the debugger at port 0 on purpose.
-- `just lint`: `cargo fmt --check`, `cargo clippy -- -D warnings`, and `gdlint` (gdtoolkit through `uvx`) over `addons/hegel` and `tests`.
+- `just lint`: `cargo fmt --check`, `cargo clippy -- -D warnings`, and `gdlint` (gdtoolkit through `uvx`) over `addons/hegel`, `tests` and `examples`.
 - `just check`: lint, build, import, test. It passes at the end of every change.
 
 The Rust toolchain is pinned in `rust-toolchain.toml`.
@@ -23,12 +23,16 @@ project.godot        dev project for tests and examples; not shipped
 addons/hegel/        the shipped addon
   hegel.gdextension  one library per platform, under debug and release keys
   bin/               built libraries (gitignored)
+  cli/run.gd         the plain headless runner, for projects without a test framework
 addons/gdUnit4/      vendored test framework, dev-only
 rust/                the gdext crate over libhegel (`hegeltest-c`, linked statically)
 tests/               gdUnit4 suites, mirroring addons/hegel/; tests/native/ drives the native classes
+  cli/fixtures/      scripts the plain runner's tests run it on
   subjects/          one-scenario SceneTree scripts, run in a fresh process by report_snapshot_test.gd
   support/           helpers; error_scenarios.gd holds error_capture_test.gd's scenarios
   approvals/         each subject's approved, scrubbed output
+examples/            a gdUnit4 suite and a plain-runner script, each failing on purpose
+docs/guide.md        the user guide; README.md is the front door
 docs/sagas/          plans and their progress logs
 ```
 
@@ -54,6 +58,8 @@ docs/sagas/          plans and their progress logs
 - **State machines.** `HegelStateMachine` (`state_machine.gd`) is a base class: state in member variables, rules as `rule_<name>(tc)` methods and invariants as `invariant_<name>(tc)`, found through `get_method_list()`. `run(tc, steps)` is Python's `_run_sequential`: the engine picks rules (`HegelTestCase._StateMachine`, concurrency 1). Each step and invariant runs through `tc._call_nested`, Python's `_child`: indented, with fresh draw names. A failed `assume` in a rule rejects only the step: `tc._reopen()` undoes the rejection and the runner calls `rule_rejected`. Any other terminal event ends the machine; its closing lines go through `_note_always`, since nothing else is recorded after the terminal event.
 - **Invalid arguments** don't raise at construction (a `push_error` in a body would be a counterexample): the factory returns `_Invalid`, and drawing it ends the run with a usage error. Bounds the engine validates (`min > max`, NaN, empty float ranges) are left to it.
 
+- **Plain runner.** `cli/run.gd` is a `SceneTree` script: it calls each `test_*` method of every `.gd` under its arguments on a new instance, and exits 1 if any failed. A test fails when it logs an error while no run is in progress (`Hegel._in_progress()`): a failed run's `push_error` counts, and errors inside bodies are the run's to judge.
+
 **The engine is the authority.** When libhegel behaves differently from upstream's frontends or Hypothesis, record it in the saga's Found section and ask the owner. Keep workarounds out of the addon.
 
 **Upstream is the reference.** Before designing a behaviour, read how `/tmp/hegel/frontends/python/python/hegel/` and `/tmp/hegel/frontends/cpp/` do it, and read `libhegel/include/hegel.h`. If `/tmp/hegel` is missing, clone `https://github.com/hegeldev/hegel` at tag `libhegel/0.48.0`. Copy their semantics, in GDScript idioms.
@@ -71,6 +77,7 @@ docs/sagas/          plans and their progress logs
 - There is no GDScript coverage tool, so prove each new test can fail: break the behaviour, watch it go red, restore it.
 - `tests/support/quality.gd` holds upstream's `minimal`, `find_any` and `assert_all_examples`, plus `usage_error`; `tests/quality/` ports upstream's shrink and find quality tests per generator, each naming its upstream case; `tests/generators/` holds contract and validation tests per family.
 - gdUnit4 adds its own `Logger` and reports script errors during a test as failures; `push_error` only when `gdunit4/settings/report/godot/push_error` is on (off by default). So a scenario that provokes an error on purpose always runs in a fresh process: add it to `tests/support/error_scenarios.gd`, or to `tests/subjects/` for a snapshot.
+- **Docs and examples.** `tests/docs_test.gd` runs every ```` ```gdscript ```` block in `README.md` and `docs/guide.md` in a fresh process: gdUnit4 suites under gdUnit4 (`Subprocess.run_gdunit4`), the rest under the plain runner. Each must pass, unless its fence reads ```` ```gdscript fails ````. A block without `const Gs` gets it prepended. `tests/examples_test.gd` runs `examples/` the same way, and both derandomize through `HEGEL_*` variables.
 - **Snapshot tests.** `tests/report_snapshot_test.gd` runs every script in `tests/subjects/` with `tests/support/subprocess.gd`, which scrubs the banner, blobs, absolute paths, Godot source locations and the addon's line numbers. A mismatch writes `tests/approvals/<name>.received.txt` (gitignored). Read it; to accept it, rename it over `<name>.approved.txt`.
 
 ## Gotchas
