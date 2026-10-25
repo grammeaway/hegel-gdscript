@@ -109,6 +109,33 @@ func test_invalid_draw_is_a_usage_error_not_a_failure() -> void:
 	assert_int(result.test_cases).is_equal(1)
 
 
+func test_a_draw_name_that_isnt_an_identifier_is_a_usage_error() -> void:
+	for name: String in ["good lines", "1x", "a-b"]:
+		var drawn: Array[int] = []
+		var result := Hegel.run(
+			func(tc: HegelTestCase) -> void: drawn.append(tc.draw(Gs.integers(5, 10), name)),
+			_settings()
+		)
+		assert_array(result.failures).is_empty()
+		assert_int(result.error_kind).is_equal(HegelResult.ErrorKind.USAGE)
+		assert_str(result.error).contains('"%s"' % name)
+		assert_array(drawn).is_equal([5])
+
+
+func test_identifier_draw_names_and_unnamed_draws_are_shown() -> void:
+	var result := Hegel.run(
+		func(tc: HegelTestCase) -> void:
+			for name: String in ["x", "_x", "x_2", "émoji", ""]:
+				tc.draw(Gs.integers(0, 0), name)
+			tc.check(false),
+		_settings()
+	)
+	assert_int(result.error_kind).is_equal(HegelResult.ErrorKind.NONE)
+	assert_str(result.report).contains(
+		"  var x = 0\n  var _x = 0\n  var x_2 = 0\n  var émoji = 0\n  var draw_1 = 0\n"
+	)
+
+
 func test_notes_are_in_the_report_in_order() -> void:
 	var result := Hegel.run(
 		func(tc: HegelTestCase) -> void:

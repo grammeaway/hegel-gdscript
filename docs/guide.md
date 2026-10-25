@@ -27,7 +27,7 @@ func test_sorting_puts_the_smallest_first() -> void:
 	)
 ```
 
-- `tc.draw(generator, name)` returns a value. The name is what the failure report calls it; unnamed draws are `draw_1`, `draw_2`, ….
+- `tc.draw(generator, name)` returns a value. The name is what the failure report calls it, and must be a GDScript identifier, or the run ends with a usage error; unnamed draws are `draw_1`, `draw_2`, ….
 - `tc.check(condition, message)` fails the case when `condition` is false, and returns `condition`. GDScript has no exceptions to stop the body, so return when it gives false: `if not tc.check(...): return`.
 - `tc.assume(condition)` rejects the case when `condition` is false: it is neither a pass nor a failure, and the engine tries another. Return when it gives false, as for `check`.
 - `tc.note(message)` adds a line to the failure report.

@@ -50,9 +50,15 @@ func _init(native: HegelNativeTestCase, recording := false, echo := false) -> vo
 ## Draws a value from [param generator]. The failure report shows it as
 ## [code]var <name> = <value>[/code]: unnamed draws are [code]draw_1[/code],
 ## [code]draw_2[/code], …, and a [param name] used again gets [code]_2[/code],
-## [code]_3[/code], …. Draws made inside a generator are part of its value,
-## and aren't shown on their own.
+## [code]_3[/code], …. A [param name] that isn't a GDScript identifier ends
+## the run with a usage error. Draws made inside a generator are part of its
+## value, and aren't shown on their own.
 func draw(generator: HegelGenerator, name := "") -> Variant:
+	if name and not name.is_valid_unicode_identifier():
+		_fail_run(
+			HegelResult.ErrorKind.USAGE,
+			'draw names must be GDScript identifiers, but got "%s"' % name.c_escape()
+		)
 	_draw_depth += 1
 	_start_span(generator.label)
 	var value: Variant = generator._draw(self)

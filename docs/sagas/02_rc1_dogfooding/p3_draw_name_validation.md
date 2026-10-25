@@ -16,9 +16,9 @@ D7: a non-empty name that fails `String.is_valid_unicode_identifier()` ends the 
 
 ## Completion
 
-- [ ] The tests are red before and green after.
-- [ ] Break it (drop the check): red. Restore it.
-- [ ] `just check` green; CI's floor job green on push.
+- [x] The tests are red before and green after.
+- [x] Break it (drop the check): red. Restore it.
+- [x] `just check` green. CI's floor job (Godot 4.5) is left to the owner's push.
 
 ## Non-goals
 
