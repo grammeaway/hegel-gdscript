@@ -52,7 +52,7 @@ runs:
         mkdir -p "$DIR"
         curl -sSfL --retry 5 --retry-delay 10 -o "$DIR/$asset" \
           "https://github.com/godotengine/godot/releases/download/$VERSION-stable/$asset"
-        echo "$sha  $DIR/$asset" | shasum -a 512 -c -
+        echo "$sha  $DIR/$asset" | if command -v sha512sum > /dev/null; then sha512sum -c -; else shasum -a 512 -c -; fi
         if [[ "$RUNNER_OS" == Windows ]]; then
           7z x -y -o"$DIR" "$DIR/$asset" > /dev/null
         else

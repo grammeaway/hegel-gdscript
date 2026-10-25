@@ -29,7 +29,7 @@ runs:
         mkdir -p "$dir"
         curl -sSfL --retry 5 --retry-delay 10 -o "$dir/$archive" \
           "https://github.com/casey/just/releases/download/$JUST_VERSION/$archive"
-        echo "$sha  $dir/$archive" | shasum -a 256 -c -
+        echo "$sha  $dir/$archive" | if command -v sha256sum > /dev/null; then sha256sum -c -; else shasum -a 256 -c -; fi
         if [[ "$RUNNER_OS" == Windows ]]; then
           7z x -y -o"$dir" "$dir/$archive" > /dev/null
         else
