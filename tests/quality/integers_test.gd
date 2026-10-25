@@ -2,7 +2,7 @@
 extends GdUnitTestSuite
 ## Integer quality, ported from upstream's
 ## frontends/cpp/tests/shrink_quality/test_integers.cpp and
-## find_quality/test_integers.cpp. The list cases wait for p6.
+## find_quality/test_integers.cpp.
 
 const Gs := preload("res://addons/hegel/generators.gd")
 const Q := preload("res://tests/support/quality.gd")
@@ -140,3 +140,42 @@ func test_all_examples_are_in_bounds() -> void:
 func test_minimize_bounded_integers_to_positive() -> void:
 	var nonzero := Gs.integers(-10, 10).filter(func(x: int) -> bool: return x != 0)
 	assert_int(Q.minimal(nonzero, _any)).is_equal(1)
+
+
+# ShrinkIntegers.MultipleElementsSillyLargeRange
+func test_multiple_elements_silly_large_range() -> void:
+	var v: Array = Q.minimal(
+		Gs.lists(Gs.integers(MIN / 2, MAX / 2)), func(x: Array) -> bool: return x.size() >= 20, 10000
+	)
+	var expected := []
+	expected.resize(20)
+	expected.fill(0)
+	assert_array(v).is_equal(expected)
+
+
+# ShrinkIntegers.MultipleElementsMinIsNotDupe
+func test_multiple_elements_min_is_not_dupe() -> void:
+	var v: Array = Q.minimal(
+		Gs.lists(Gs.integers(0, MAX / 2)),
+		func(x: Array) -> bool:
+			if x.size() < 20:
+				return false
+			for i: int in 20:
+				if x[i] < i:
+					return false
+			return true,
+		10000
+	)
+	assert_array(v).is_equal(range(20))
+
+
+# FindIntegers.MinimizesListsOfNegativeIntsUpToBoundary
+func test_minimizes_lists_of_negative_ints_up_to_boundary() -> void:
+	var v: Array = Q.minimal(
+		Gs.lists(Gs.integers(), 10),
+		func(x: Array) -> bool: return x.filter(func(e: int) -> bool: return e <= -1).size() >= 10
+	)
+	var expected := []
+	expected.resize(10)
+	expected.fill(-1)
+	assert_array(v).is_equal(expected)

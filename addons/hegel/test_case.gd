@@ -198,6 +198,19 @@ func _draw_boolean() -> bool:
 	return value if _call_ok("generate_boolean") else false
 
 
+func _draw_string(generator: HegelNativeStringGenerator, simplest: String) -> String:
+	if _ended:
+		return simplest
+	var value := _native.generate_string(generator)
+	return value if _call_ok("generate_string") else simplest
+
+
+## A collection of [param min_size] to [param max_size] elements; -1 is no
+## upper bound. Loop on its [method _Collection.more], drawing one element each.
+func _collection(min_size: int, max_size: int) -> _Collection:
+	return _Collection.new(self, min_size, max_size)
+
+
 ## The smallest float above [param x], as the engine steps an excluded bound.
 static func _next_up(x: float) -> float:
 	if is_nan(x) or x == INF:
@@ -224,6 +237,48 @@ func _stop_span(discard := false) -> void:
 	if not _ended:
 		_native.stop_span(discard)
 		_call_ok("stop_span")
+
+
+## The engine decides a collection's size. Once the case has ended it asks for
+## elements only up to the minimum size, and stops at the first rejection, since
+## a unique collection of simplest values would reject forever.
+class _Collection:
+	var _tc: HegelTestCase
+	var _native: HegelNativeCollection
+	var _min_size: int
+	var _size := 0
+	var _done := false
+
+	func _init(tc: HegelTestCase, min_size: int, max_size: int) -> void:
+		_tc = tc
+		_min_size = min_size
+		if not tc._ended:
+			_native = tc._native.new_collection(min_size, max_size)
+			tc._call_ok("new_collection")
+
+	## Whether to draw another element.
+	func more() -> bool:
+		if _done:
+			return false
+		var wanted := _size < _min_size
+		if not _tc._ended:
+			var engine_wants := _tc._native.collection_more(_native)
+			if _tc._call_ok("collection_more"):
+				wanted = engine_wants
+		if wanted:
+			_size += 1
+		else:
+			_done = true
+		return wanted
+
+	## Discards the element just drawn, a duplicate say, so it doesn't count.
+	func reject() -> void:
+		_size -= 1
+		if _tc._ended:
+			_done = true
+			return
+		_tc._native.collection_reject(_native)
+		_tc._call_ok("collection_reject")
 
 
 ## Turns a failed engine call into the case's terminal event.

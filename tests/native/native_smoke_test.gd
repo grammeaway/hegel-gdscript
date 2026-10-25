@@ -200,3 +200,37 @@ func test_verbose_run_emits_output_that_drains_once() -> void:
 		tc = run.next_test_case()
 	assert_array(Array(run.drain_output())).is_not_empty()
 	assert_array(Array(run.drain_output())).is_empty()
+
+
+func test_collection_draws() -> void:
+	var run := HegelNativeRun.new()
+	run.start(_settings(SEED))
+	var tc := run.next_test_case()
+	assert_object(tc.new_collection(-1, 3)).is_null()
+	assert_int(tc.last_result).is_equal(HegelNative.E_INVALID_ARG)
+	assert_str(tc.last_error).contains("min_size")
+	assert_object(tc.new_collection(3, 2)).is_null()
+	assert_int(tc.last_result).is_equal(HegelNative.E_INVALID_ARG)
+	var collection := tc.new_collection(1, -1)
+	assert_int(tc.last_result).is_equal(HegelNative.OK)
+	assert_bool(tc.collection_more(collection)).is_true()
+	assert_int(tc.collection_reject(collection)).is_equal(HegelNative.OK)
+	tc.collection_more(collection)
+	assert_int(tc.last_result).is_equal(HegelNative.OK)
+	tc.mark_complete(HegelNativeTestCase.STATUS_VALID, "")
+
+
+func test_string_draws() -> void:
+	var generator := HegelNativeStringGenerator.new()
+	assert_int(generator.text(-1, 5, 1, 10)).is_equal(HegelNative.E_INVALID_ARG)
+	assert_str(generator.last_error).contains("min_size")
+	assert_int(generator.text(0, 5, 1, -1)).is_equal(HegelNative.E_INVALID_ARG)
+	assert_str(generator.last_error).contains("max_codepoint")
+	assert_int(generator.text(5, 3, 1, 10)).is_equal(HegelNative.E_INVALID_ARG)
+	assert_int(generator.text(2, 2, 0x41, 0x41)).is_equal(HegelNative.OK)
+	var run := HegelNativeRun.new()
+	run.start(_settings(SEED))
+	var tc := run.next_test_case()
+	assert_str(tc.generate_string(generator)).is_equal("AA")
+	assert_int(tc.last_result).is_equal(HegelNative.OK)
+	tc.mark_complete(HegelNativeTestCase.STATUS_VALID, "")

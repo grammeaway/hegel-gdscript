@@ -2,8 +2,7 @@
 extends GdUnitTestSuite
 ## Float quality, ported from upstream's
 ## frontends/cpp/tests/shrink_quality/test_floats.cpp and
-## find_quality/test_floats.cpp; each test names its upstream case. The list
-## cases wait for p6.
+## find_quality/test_floats.cpp; each test names its upstream case.
 
 const Gs := preload("res://addons/hegel/generators.gd")
 const Q := preload("res://tests/support/quality.gd")
@@ -13,6 +12,13 @@ const MAX := 1.7976931348623157e308
 
 static func _any(_x: float) -> bool:
 	return true
+
+
+static func _sum(xs: Array) -> float:
+	var total := 0.0
+	for x: float in xs:
+		total += x
+	return total
 
 
 # shrink_quality
@@ -174,3 +180,41 @@ func test_can_minimal_float_far_from_integral() -> void:
 			return fmod(scaled, 1.0) != 0.0
 	)
 	assert_bool(is_finite(x)).is_true()
+
+
+# ShrinkFloats.CanShrinkInVariableSizedContext_1, _2, _3, _8, _10
+func test_can_shrink_in_variable_sized_context() -> void:
+	for n: int in [1, 2, 3, 8, 10]:
+		var v: Array = Q.minimal(
+			Gs.lists(Gs.floats(), n),
+			func(xs: Array) -> bool: return xs.any(func(f: float) -> bool: return f != 0.0)
+		)
+		assert_int(v.size()).is_equal(n)
+		assert_int(v.count(0.0)).is_equal(n - 1)
+		assert_bool(v.has(1.0)).is_true()
+
+
+# ShrinkFloats.CanFindNans
+func test_can_find_nans() -> void:
+	var v: Array = Q.minimal(Gs.lists(Gs.floats()), func(xs: Array) -> bool: return is_nan(_sum(xs)))
+	if v.size() == 1:
+		assert_bool(is_nan(v[0])).is_true()
+	else:
+		assert_int(v.size()).is_between(2, 3)
+
+
+# FindFloats.MinimalSmallSumFloatList
+func test_minimal_small_sum_float_list() -> void:
+	var v: Array = Q.minimal(Gs.lists(Gs.floats(), 5), func(xs: Array) -> bool: return _sum(xs) >= 1.0)
+	assert_array(v).is_equal([0.0, 0.0, 0.0, 0.0, 1.0])
+
+
+# FindFloats.ListOfFractionalFloat: every element is 2.0, the only float whose
+# bits equal 2.0's.
+func test_list_of_fractional_float() -> void:
+	var v: Array = Q.minimal(
+		Gs.lists(Gs.floats(), 5),
+		func(xs: Array) -> bool: return xs.filter(func(t: float) -> bool: return t >= 1.5).size() >= 5
+	)
+	assert_array(v).is_not_empty()
+	assert_array(v.filter(func(f: float) -> bool: return f != 2.0)).is_empty()

@@ -29,11 +29,11 @@ Each generator follows its Python counterpart in `frontends/python/python/hegel/
 
 ## Completion
 
-- [ ] `just check` is green.
-- [ ] `minimal(lists(booleans(), 50), xs.size() >= 70)` is 70 `false`s (`MinimizeLongList`).
-- [ ] Removing the `collection_reject` call for duplicates turns the `unique` contract test red. Check this, then restore it.
-- [ ] Removing the U+0000 exclusion turns the `text` contract test red. Check this, then restore it. If the engine never produces U+0000 in 1000 cases, force it with `min_codepoint = 0, max_codepoint = 0` and record what happens.
-- [ ] Every ported upstream test is either present, or listed in `progress.md` with the reason it was skipped.
+- [x] `just check` is green.
+- [x] `minimal(lists(booleans(), 50), xs.size() >= 70)` is 70 `false`s (`MinimizeLongList`).
+- [x] Removing the `collection_reject` call for duplicates turns the `unique` contract test red. Check this, then restore it.
+- [x] Removing the U+0000 exclusion turns the `text` contract test red. Check this, then restore it. If the engine never produces U+0000 in 1000 cases, force it with `min_codepoint = 0, max_codepoint = 0` and record what happens. (The test forces it with codepoints `[0, 1]`; recorded under Found.)
+- [x] Every ported upstream test is either present, or listed in `progress.md` with the reason it was skipped.
 
 ## Non-goals
 

@@ -8,8 +8,10 @@ use hegel_c as c;
 use hegel_c::hegel_result_t as Rc;
 use std::ffi::c_char;
 
+mod collection;
 mod run;
 mod settings;
+mod string_generator;
 mod test_case;
 
 struct HegelExtension;

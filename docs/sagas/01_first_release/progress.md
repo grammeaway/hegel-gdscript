@@ -11,7 +11,7 @@ This is the live log for the plans in `README.md`. There is one row per plan; de
 | p3 report and replay | done | `fc05e85` | 77 tests green, 9 approved snapshots; mutation checks red; F: gdUnit4 ignores `push_error` by default |
 | p4 runtime errors | done | `4da25ff` | 89 tests green, 10 approved snapshots; mutation checks red; adds `report_multiple_failures` (P4.1) |
 | p5 scalars and combinators | done | `bab2ccc` | 156 tests green; float, one_of, flat_map and mixed quality ported; `filter.attempt` discard and the `one_of` span aren't pinned by any upstream test (Found) |
-| p6 collections and text | planned | | |
+| p6 collections and text | done | `2fd6131` | 243 tests green; collection and text quality ported, plus p5's deferred list cases; mutation checks red |
 | p7 state machines | planned | | |
 | p8 docs and integration | planned | | |
 | p9 ci and release | planned | | |
@@ -72,6 +72,15 @@ Decisions taken during passes, with who took each one (owner or agent) and when.
 | P5.8 | `map`, `filter`, `flat_map` and `composite` check `Callable.is_valid()` at construction and return the invalid generator, under P5.1. Python only checks `composite`; an invalid Callable called in a body would otherwise be a runtime error, reported as a counterexample. | 2026-10-24, agent |
 | P5.9 | A filter that exhausts its attempts in simplest mode returns its last (simplest) source value, which may not satisfy the predicate; the case has already ended (D8). | 2026-10-24, agent |
 | P5.10 | `tests/support/quality.gd` gains `usage_error(gen)`, used by every validation test. | 2026-10-24, agent |
+| P6.1 | `text()` takes only sizes and codepoint bounds: no `alphabet`, `codec`, categories or included/excluded characters until someone needs them. | 2026-10-24, owner |
+| P6.2 | `text`'s `max_size = -1` is Python's default cap: 100, or `min_size + 100` when `min_size` is larger. Lists and dictionaries have no default cap. | 2026-10-24, owner |
+| P6.3 | Unique lists and dictionary keys compare by `Dictionary`-key equality (as `Array.has`: `1`, `1.0` and `true` distinct, `"a"` and `&"a"` equal, NaN equal to NaN). Python's distinct-values check is in: a unique `min_size` above what `just` (1), `booleans` (2), `sampled_from` (its distinct elements) or bounded `integers` can give is a usage error. Python's sampling without replacement and `unique_by` are out (C++ has neither). | 2026-10-24, owner |
+| P6.4 | Native shape: `HegelNativeTestCase.new_collection(min, max)`, `collection_more(c)`, `collection_reject(c)` and `generate_string(g)`, so every draw's result code lands on the test case, which `_call_ok` reads; `HegelNativeCollection` is a bare handle freed on drop. A negative `max_size` means no bound (`UINT64_MAX`), as `""` means NULL (P1.7). `HegelNativeStringGenerator` is `new()` then `text(min_size, max_size, min_codepoint, max_codepoint)`, as P1.10, freed on drop. | 2026-10-24, agent |
+| P6.5 | `text` builds its `HegelNativeStringGenerator` in `generators.gd`, at construction, and an engine error there becomes the invalid generator (P5.1). `AGENTS.md` records it as the second exception, after `HegelNative`'s labels, to "only four scripts touch native classes". | 2026-10-24, agent |
+| P6.6 | Span labels follow the factory names, as p5's: `lists` and `tuples` combined with their parts' labels, `dictionaries` with the key and value labels, `text` alone, as Python. | 2026-10-24, agent |
+| P6.7 | Simplest mode (D8) for collections: `more` is true only up to `min_size`, and the first rejection ends the collection, since a unique list of simplest values would otherwise reject forever. Simplest text repeats the engine's simplest character, not always `"0"`: the smallest codepoint from `"0"` up, else `max_codepoint` (libhegel's `char_in_shrink_order`). Checked against `minimal`: `[0x41, 0x5A]` gives `"AA"`, `[0x20, 0x2F]` gives `"//"`. | 2026-10-24, agent |
+| P6.8 | Validation (P5.1): the addon checks negative sizes, `max_size < -1`, codepoints outside `[0, 0x10FFFF]` or out of order (the engine would intersect them silently), a `max_codepoint` below 1 (named after U+0000), null element, key or value generators, and non-generators in `tuples`; the engine checks `max_size < min_size` and empty alphabets, with its own messages. | 2026-10-24, agent |
+| P6.9 | `tuples(...generators)` is variadic, as `one_of` (P5.3), and draws an `Array`. | 2026-10-24, agent |
 
 ## Deviations
 
@@ -124,6 +133,17 @@ For each plan: where the work differed from the plan, and why.
 - Mutation checks: not passing `exclude_min` turns the excluded-bounds and float-validation tests red; passing `allow_nan` or `allow_infinity` raw turns 6 and 4 float tests red; 2 filter attempts turns the three-attempts test red; not merging chained filters, not copying `sampled_from`'s Array, not checking `flat_map`'s result, not flattening `one_of`, and each branch of `_next_up` each turn their test red. Dropping the `filter.attempt` discard, drawing `one_of` without its span, and drawing its branch without a span all left every test green (Found).
 - The editor autocomplete check for the `Gs` alias (F6) needs the editor: left for p8's owner check.
 
+**p6**
+
+- The collection calls live on `HegelNativeTestCase`, not on `HegelNativeCollection` (P6.4).
+- Placement: the list cases of `test_integers.cpp`, `test_mixed_types.cpp`, `test_flatmap.cpp` and `test_floats.cpp` / `find_quality/test_floats.cpp` went into the existing `tests/quality/integers_test.gd`, `combinators_test.gd` and `floats_test.gd`, keeping one of our files per upstream family; `tests/quality/collections_test.gd` holds `test_collections.cpp` (shrink and find), and `tests/quality/text_test.gd` holds `test_strings.cpp` (shrink and find).
+- Ported: every `ShrinkCollections`, `FindCollections`, `ShrinkStrings` and `FindStrings` case, plus every list case p5 deferred (listed under p5). Sets became unique lists compared sorted; maps became dictionaries; `BuildsStructShrinksSeparatedFields` uses a tuple of the fields; C++'s `isspace` trim is ported as is. Not ported: `ShrinkCollections.DuplicateContainment` (disabled upstream, "shrinker regression") and `FindStrings.CanProduceLargeBinaryStrings` (no `binary()`). No ported string test needed the alphabet options P6.1 leaves out. `ShrinkMixed.OneOfMixed` runs once, as `OneOfIntegers`.
+- Step 4: no upstream test uses `sum > 100`. `CanFindList` (`sum >= 10` shrinks to a sum of exactly 10) is ported, and the headline case pins its sum at exactly 101 by the same guarantee; the minimal list was `[101]`.
+- Beyond the plan: Python's `test_unique_collections_need_enough_distinct_values` / `_with_enough_distinct_values` (P6.3), its unique-list report test, `Dictionary`-key equality, simplest values, null-generator errors, and two native smoke tests for the new bindings, including the out-of-range arguments the GDScript layer never sends.
+- A test mistake while writing: I asserted `lists(integers(), 3, -1, true)` had exactly 3 elements; `min_size` is a minimum. Fixed to `>= 3`.
+- Completion checks: `minimal(lists(booleans(), 50), xs.size() >= 70)` is 70 `false`s.
+- Mutation checks: dropping the lists' `collection.reject()` turns 3 unique tests red, and the dictionaries' turns 2 red; dropping the U+0000 exclusion turns `test_text_never_draws_u0000` red: asked for codepoints `[0, 1]`, the engine draws U+0000, and the counterexample came back as `""` (Found); dropping the distinct-values check turns its test red; always using `"0"` as simplest text turns the simplest-value test red; not ending a collection at a simplest-mode rejection hangs `collections_test.gd`, killed by the timeout.
+
 ## Found
 
 Bugs or debts found during a pass and kept out of its diff.
@@ -138,3 +158,5 @@ Bugs or debts found during a pass and kept out of its diff.
 - **p5, for the owner:** no test pins span structure. Dropping the `filter.attempt` span's `discard = true`, removing `one_of`'s span, or drawing its branch without a span leaves every ported quality and contract test green, and upstream's C++ and Python suites have no test that would notice either. Spans are shrinker hints, and the engine doesn't expose them, so we keep upstream's structure without a test to guard it.
 - **p5:** Godot 4.7.2 parses float literals loosely: `5e-324` is 0.0, `0.9999999999999999` (and `"0.9999999999999999".to_float()`) is an ulp off, and `[0.0, -0.0]` folds the `-0.0` into 0.0. Now in `AGENTS.md` Gotchas. For p8: users who write such bounds get what Godot parsed, not what they wrote.
 - **p5, upstream:** C++'s `floats({.allow_infinity = false})` keeps `allow_nan` defaulting to true while it replaces the open ends with ±MAX, which the engine rejects ("allow_nan with min_value or max_value"). Python only uses ±MAX when NaN is off too. Read from the source, not run.
+- **p6:** a U+0000 from the engine doesn't survive into a Godot `String`: with the exclusion removed, a `text(1, 5, 0, 1)` draw came back as `""`. And `char(0)` in GDScript raises "Unicode parsing error … Unexpected NUL character" and becomes U+FFFD, which the p4 Logger would count as a failure. Any later alphabet option (`include_characters`, P6.1) must keep U+0000 out too.
+- **p6, for p8:** a drawn `Dictionary` shows over several lines in the report, since `var_to_str` breaks them (`var d = {` / `0: "",` / …, each line indented). It is valid GDScript, but long; Arrays and Strings stay on one line.

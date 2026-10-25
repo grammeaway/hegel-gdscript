@@ -104,6 +104,146 @@ static func composite(fn: Callable) -> HegelGenerator:
 	return _Composite.new(fn)
 
 
+## Arrays of values from [param elements], with [param min_size] to
+## [param max_size] of them; -1 is no upper bound, and the engine keeps sizes
+## modest. They shrink towards fewer elements, each shrinking as
+## [param elements] does.
+## [br][br]
+## With [param unique], no two elements are equal as [Dictionary] keys: so
+## [code]1[/code], [code]1.0[/code] and [code]true[/code] are distinct, and a
+## duplicate is discarded and another drawn. Negative sizes, a
+## [param max_size] below [param min_size], or a unique [param min_size] above
+## the distinct values [param elements] is known to have, are a usage error.
+static func lists(
+	elements: HegelGenerator, min_size := 0, max_size := -1, unique := false
+) -> HegelGenerator:
+	var invalid := _check_collection("lists", "elements", elements, min_size, max_size, unique)
+	return invalid if invalid else _Lists.new(elements, min_size, max_size, unique)
+
+
+## Fixed-length Arrays with one value from each of [param generators], in
+## order: [code]Gs.tuples(Gs.integers(), Gs.text())[/code] draws pairs like
+## [code][0, ""][/code]. With no generators it draws only [code][][/code]. An
+## argument that isn't a [HegelGenerator] is a usage error.
+static func tuples(...generators: Array) -> HegelGenerator:
+	var parts: Array[HegelGenerator] = []
+	for i: int in generators.size():
+		if not generators[i] is HegelGenerator:
+			return _Invalid.new(
+				"tuples takes HegelGenerators, but argument %d is %s" % [i + 1, generators[i]]
+			)
+		parts.append(generators[i])
+	return _Tuples.new(parts)
+
+
+## Dictionaries with keys from [param keys] and values from [param values],
+## with [param min_size] to [param max_size] entries; -1 is no upper bound. A
+## duplicate key is discarded and another drawn. Sizes are validated as for
+## [method lists], with the keys unique.
+static func dictionaries(
+	keys: HegelGenerator, values: HegelGenerator, min_size := 0, max_size := -1
+) -> HegelGenerator:
+	if values == null:
+		return _Invalid.new("dictionaries needs a generator of values")
+	var invalid := _check_collection("dictionaries", "keys", keys, min_size, max_size, true)
+	return invalid if invalid else _Dictionaries.new(keys, values, min_size, max_size)
+
+
+## Strings of [param min_size] to [param max_size] characters, drawn from the
+## codepoints [code][min_codepoint, max_codepoint][/code], surrogates excluded.
+## [param max_size] -1 means 100, or [code]min_size + 100[/code] when
+## [param min_size] is larger. They shrink towards shorter strings, and
+## towards [code]"0"[/code] for each character.
+## [br][br]
+## U+0000 is never drawn, since a Godot [String] can't hold it: a
+## [param min_codepoint] of 0 means 1, and a [param max_codepoint] below 1 is
+## a usage error, as are negative sizes, a [param max_size] below
+## [param min_size], and codepoints outside [code][0, 0x10FFFF][/code] or out of
+## order.
+static func text(
+	min_size := 0, max_size := -1, min_codepoint := 1, max_codepoint := 0x10FFFF
+) -> HegelGenerator:
+	var invalid := _check_sizes("text", min_size, max_size)
+	if invalid:
+		return invalid
+	if max_size == -1:
+		max_size = min_size + 100 if min_size > 100 else 100
+	if min_codepoint < 0 or max_codepoint > 0x10FFFF or min_codepoint > max_codepoint:
+		return _Invalid.new(
+			(
+				"text needs 0 <= min_codepoint <= max_codepoint <= 0x10FFFF, got %d and %d"
+				% [min_codepoint, max_codepoint]
+			)
+		)
+	if max_codepoint < 1:
+		return _Invalid.new("text can't draw U+0000, which a Godot String can't hold")
+	min_codepoint = maxi(min_codepoint, 1)
+	var native := HegelNativeStringGenerator.new()
+	if native.text(min_size, max_size, min_codepoint, max_codepoint) != HegelNative.OK:
+		return _Invalid.new(native.last_error)
+	# The engine's simplest character: "0" when it's in range, else the nearest bound.
+	# shortcut: a min_codepoint among the surrogates gives one here, where the engine
+	# skips them; fix it if anyone bounds text there.
+	return _Text.new(native, char(clampi(0x30, min_codepoint, max_codepoint)).repeat(min_size))
+
+
+## A usage error for a collection's arguments, or null when they are valid.
+static func _check_collection(
+	factory: String,
+	what: String,
+	elements: HegelGenerator,
+	min_size: int,
+	max_size: int,
+	unique: bool
+) -> _Invalid:
+	if elements == null:
+		return _Invalid.new("%s needs a generator of %s" % [factory, what])
+	var invalid := _check_sizes(factory, min_size, max_size)
+	if invalid:
+		return invalid
+	var distinct := _distinct_values(elements)
+	if unique and distinct >= 0 and distinct < min_size:
+		return _Invalid.new(
+			(
+				"%s can't draw %d unique %s from a generator with only %d distinct value%s"
+				% [factory, min_size, what, distinct, "" if distinct == 1 else "s"]
+			)
+		)
+	return null
+
+
+## The engine checks [code]max_size < min_size[/code] itself, but can't see
+## negative sizes, which the native layer takes as unsigned.
+static func _check_sizes(factory: String, min_size: int, max_size: int) -> _Invalid:
+	if min_size < 0:
+		return _Invalid.new("%s needs min_size >= 0, got %d" % [factory, min_size])
+	if max_size < -1:
+		return _Invalid.new(
+			"%s needs max_size >= 0, or -1 for no bound, got %d" % [factory, max_size]
+		)
+	return null
+
+
+## How many distinct values [param generator] can draw, when its definition
+## says; -1 when it doesn't.
+static func _distinct_values(generator: HegelGenerator) -> int:
+	if generator is _Just:
+		return 1
+	if generator is _Booleans:
+		return 2
+	if generator is _SampledFrom:
+		var seen := {}
+		for element: Variant in (generator as _SampledFrom)._elements:
+			seen[element] = true
+		return seen.size()
+	if generator is _Integers:
+		var integers := generator as _Integers
+		# A range too wide for an int wraps to <= 0, as does an empty one the engine reports.
+		var count := integers._max - integers._min + 1
+		return count if count > 0 else -1
+	return -1
+
+
 ## The span label for [param kind] combined with [param parts], in order.
 static func _combined(kind: String, parts: Array[int]) -> int:
 	var labels := PackedInt64Array([HegelTestCase._label(kind)])
@@ -291,6 +431,93 @@ class _Composite:
 
 	func _draw(tc: HegelTestCase) -> Variant:
 		return _fn.call(tc)
+
+
+class _Lists:
+	extends HegelGenerator
+	var _elements: HegelGenerator
+	var _min_size: int
+	var _max_size: int
+	var _unique: bool
+
+	func _init(elements: HegelGenerator, min_size: int, max_size: int, unique: bool) -> void:
+		label = HegelGenerators._combined("lists", [elements.label])
+		_elements = elements
+		_min_size = min_size
+		_max_size = max_size
+		_unique = unique
+
+	func _draw(tc: HegelTestCase) -> Variant:
+		var collection := tc._collection(_min_size, _max_size)
+		var result := []
+		var seen := {}
+		while collection.more():
+			var element: Variant = tc.draw(_elements)
+			if _unique:
+				if seen.has(element):
+					collection.reject()
+					continue
+				seen[element] = true
+			result.append(element)
+		return result
+
+
+class _Tuples:
+	extends HegelGenerator
+	var _parts: Array[HegelGenerator]
+
+	func _init(parts: Array[HegelGenerator]) -> void:
+		var labels: Array[int] = []
+		for part: HegelGenerator in parts:
+			labels.append(part.label)
+		label = HegelGenerators._combined("tuples", labels)
+		_parts = parts
+
+	func _draw(tc: HegelTestCase) -> Variant:
+		var result := []
+		for part: HegelGenerator in _parts:
+			result.append(tc.draw(part))
+		return result
+
+
+class _Dictionaries:
+	extends HegelGenerator
+	var _keys: HegelGenerator
+	var _values: HegelGenerator
+	var _min_size: int
+	var _max_size: int
+
+	func _init(keys: HegelGenerator, values: HegelGenerator, min_size: int, max_size: int) -> void:
+		label = HegelGenerators._combined("dictionaries", [keys.label, values.label])
+		_keys = keys
+		_values = values
+		_min_size = min_size
+		_max_size = max_size
+
+	func _draw(tc: HegelTestCase) -> Variant:
+		var collection := tc._collection(_min_size, _max_size)
+		var result := {}
+		while collection.more():
+			var key: Variant = tc.draw(_keys)
+			if result.has(key):
+				collection.reject()
+				continue
+			result[key] = tc.draw(_values)
+		return result
+
+
+class _Text:
+	extends HegelGenerator
+	var _native: HegelNativeStringGenerator
+	var _simplest: String
+
+	func _init(native: HegelNativeStringGenerator, simplest: String) -> void:
+		label = HegelTestCase._label("text")
+		_native = native
+		_simplest = simplest
+
+	func _draw(tc: HegelTestCase) -> Variant:
+		return tc._draw_string(_native, _simplest)
 
 
 ## Stands in for a generator built with invalid arguments: drawing from it
