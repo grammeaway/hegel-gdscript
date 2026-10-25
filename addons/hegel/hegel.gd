@@ -55,8 +55,11 @@ class _Capture:
 ## like gdUnit4, fails the test. A run that ends in an error pushes its message,
 ## which is also its report.
 ## [br][br]
-## Failures are saved in the database ([member HegelSettings.database]) under
-## the script and function calling [method run], and replayed first next time.
+## Failures are saved in the database ([member HegelSettings.database]) and
+## replayed first next time. They are keyed by
+## [member HegelSettings.database_key], which defaults to the script and
+## function of the innermost [code]test_*[/code] function calling [method run],
+## through any helpers, or to [method run]'s direct caller without one.
 ## [br][br]
 ## A run can't start inside another run's body: that inner run returns a
 ## [constant HegelResult.ErrorKind.USAGE] error.
@@ -85,6 +88,8 @@ static func _guarded(
 	body: Callable, settings: HegelSettings, blob: String, key: String
 ) -> HegelResult:
 	var resolved := settings if settings else HegelSettings.new()
+	if resolved.database_key:
+		key = resolved.database_key
 	var thread := OS.get_thread_caller_id()
 	_lock.lock()
 	var nested: bool = _running.has(thread)
@@ -245,13 +250,20 @@ static func _in_progress() -> bool:
 	return running
 
 
-## [code]<script>::<function>[/code] of the code calling the caller of this
-## function, or "" without a stack (in a release build, say).
+## [code]<script>::<function>[/code] of the innermost [code]test_*[/code] frame
+## calling the caller of this function, so a helper wrapping [method run] keys
+## each test apart; else of that direct caller; "" without a stack (in a
+## release build, say).
 static func _caller_key() -> String:
 	var stack := get_stack()
 	if stack.size() < 3:
 		return ""
-	return "%s::%s" % [stack[2].source, stack[2].function]
+	var frame: Dictionary = stack[2]
+	for candidate: Dictionary in stack.slice(2):
+		if candidate.function.begins_with("test_"):
+			frame = candidate
+			break
+	return "%s::%s" % [frame.source, frame.function]
 
 
 static func _internal_error(call_name: String, message: String, test_cases: int) -> HegelResult:

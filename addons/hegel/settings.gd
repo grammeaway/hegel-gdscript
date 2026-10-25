@@ -48,6 +48,11 @@ var report_multiple_failures: bool
 ## [code]user://[/code], [code]res://[/code] or absolute path. [code]""[/code]
 ## disables the database.
 var database: String
+## The key failures are stored under in [member database]. [code]""[/code], the
+## default, derives it from the innermost [code]test_*[/code] function calling
+## [method Hegel.run], or the direct caller without one. Set it to keep apart
+## runs that share a function, like a parameterized test's parameter sets.
+var database_key: String
 ## How much the engine prints during a run.
 var verbosity: Verbosity
 ## A bitwise OR of [enum HealthCheck] flags not to fail the run on.

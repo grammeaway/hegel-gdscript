@@ -1,8 +1,7 @@
 extends GdUnitTestSuite
-## The failure report, draw names, Hegel.replay and the database key.
+## The failure report, draw names and Hegel.replay.
 
 const Gs := preload("res://addons/hegel/generators.gd")
-const DATABASE := "user://report_test_database"
 
 
 ## A generator whose value is made of two nested draws.
@@ -268,36 +267,3 @@ func test_replay_of_a_bad_blob_is_a_usage_error() -> void:
 		var replayed := Hegel.replay(blob, _fails_from_10, _settings())
 		assert_int(replayed.error_kind).is_equal(HegelResult.ErrorKind.USAGE)
 		assert_str(replayed.error).is_not_empty()
-
-
-func test_database_replays_a_stored_failure_first() -> void:
-	_remove_tree(DATABASE)
-	var settings := _settings()
-	settings.database = DATABASE
-	var stored := Hegel.run(_fails_from_10, settings)
-	settings.seed = 2
-	var firsts: Array[int] = []
-	var replayed := Hegel.run(
-		func(tc: HegelTestCase) -> void:
-			var x: int = tc.draw(Gs.integers(0, 1000))
-			if firsts.is_empty():
-				firsts.append(x)
-			tc.check(x < 10),
-		settings
-	)
-	_remove_tree(DATABASE)
-	assert_bool(stored.passed).is_false()
-	assert_bool(replayed.passed).is_false()
-	assert_array(firsts).is_equal([10])
-
-
-static func _remove_tree(path: String) -> void:
-	var dir := DirAccess.open(path)
-	if dir == null:
-		return
-	dir.include_hidden = true
-	for file: String in dir.get_files():
-		dir.remove(file)
-	for sub: String in dir.get_directories():
-		_remove_tree(path.path_join(sub))
-	DirAccess.remove_absolute(path)

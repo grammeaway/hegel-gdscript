@@ -48,7 +48,7 @@ func _doubling_is_even(tc: HegelTestCase) -> void:
 	tc.check((x * 2) % 2 == 0, "x * 2 is even")
 ```
 
-`HegelSettings.new()` starts from the engine's profile (see [Failures](#failures)), so it has every field set; change what you need. The fields are `test_cases`, `seed` with `has_seed`, `derandomize`, `report_multiple_failures`, `database`, `verbosity` and `suppress_health_checks`.
+`HegelSettings.new()` starts from the engine's profile (see [Failures](#failures)), so it has every field set; change what you need. The fields are `test_cases`, `seed` with `has_seed`, `derandomize`, `report_multiple_failures`, `database`, `database_key`, `verbosity` and `suppress_health_checks`.
 
 ## Generators
 
@@ -108,7 +108,7 @@ Check failed: the rows fit every item (res://tests/grid_test.gd:10)
 Reproduce with: Hegel.replay("AAIAAAAACgEAAAABAAoBAAAAAg==", <body>)
 ```
 
-The header names the script and function that called `Hegel.run`. Then come the draws and notes of the shrunk case, in order, what failed and where, and the blob that replays it. `Hegel.run` prints the report to stderr and pushes a one-line error; the report is also in `result.report`.
+The header names the database key (see below). Then come the draws and notes of the shrunk case, in order, what failed and where, and the blob that replays it. `Hegel.run` prints the report to stderr and pushes a one-line error; the report is also in `result.report`.
 
 To debug a failure, replay its blob with the same body. A replay runs only that case, and reports it again:
 
@@ -124,7 +124,9 @@ func test_replaying_a_failure() -> void:
 
 Once the bug is fixed, the replay returns a `DID_NOT_REPRODUCE` error, a reminder to remove it.
 
-**The database.** Failures are saved under `user://hegel/`, keyed by the calling script and function, and replayed first on the next run, so a failure keeps failing until it is fixed. `settings.database` changes the directory; `""` turns it off.
+**The database.** Failures are saved under `user://hegel/` and replayed first on the next run, so a failure keeps failing until it is fixed. `settings.database` changes the directory; `""` turns it off.
+
+Each test's failures are kept under its own key: the script and function of the innermost `test_*` function calling `Hegel.run`, so a helper of yours that wraps `Hegel.run` still keys each test apart. Without a `test_*` function, the key is the function calling `Hegel.run`. A function that runs several properties, like a gdUnit4 parameterized test, shares one key across them; give each its own with `settings.database_key`, say `"test_damage::%s" % weapon`. The key also seeds a derandomized run.
 
 **Settings from the environment.** A new `HegelSettings` starts from the engine's settings profile:
 

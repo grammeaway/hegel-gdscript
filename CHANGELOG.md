@@ -24,3 +24,4 @@ The first release: a property-based testing addon for Godot 4.5 and newer, on He
 Since `v0.1.0-rc.1`:
 
 - `HegelResult.report` holds the error line of a run that ended in an error, so `override_failure_message(result.report)` explains it too. It was empty.
+- The database key, and the report header, name the innermost `test_*` function calling `Hegel.run`, so tests sharing a helper that wraps it no longer replay each other's failures. It was the direct caller. `HegelSettings.database_key` sets the key, for a parameterized test's parameter sets.
