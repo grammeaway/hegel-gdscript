@@ -202,6 +202,7 @@ For each plan: where the work differed from the plan, and why.
 - The floor ran locally before any push: Godot 4.5.2 imported a copy of the project and passed all 280 tests.
 - Step 3: `just package` makes a 2.8 MB zip of the 28 files under `addons/hegel/` (the Linux library only, locally); `just smoke-package` unzips it into `dist/smoke/`, imports, and passes. Mutation check: the same zip with `hegel.gdextension` pointing at a missing library printed `PASS` and exited 0 before P9.10, and exits 1 with the message after it.
 - CI run 1: `lint` and `floor` green; `test (windows-latest)` failed installing just: Git Bash has `sha256sum` / `sha512sum` but no `shasum`, and macOS has only `shasum`. Both setup actions now use `sha<n>sum` where it exists, else `shasum -a <n>`.
+- CI run 2, Windows: the suite ran, 278 of 280 green. `examples_test` failed because `Subprocess.run_gdunit4` didn't turn the Windows console build's CRLF into LF, as `Subprocess.run` does; it does now (a test-helper bug). The `runtime_error` snapshot differed; CI now uploads `tests/approvals/*.received.txt` when the suite fails, to see how.
 
 ## Found
 

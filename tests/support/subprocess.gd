@@ -31,7 +31,7 @@ static func run(script: String, user_args: PackedStringArray = []) -> Outcome:
 
 
 ## Runs gdUnit4's command-line tool headless on [param path], a suite or a
-## directory of them, with its colour codes stripped from the output. gdUnit4
+## directory of them, with its colour codes and CRs stripped from the output. gdUnit4
 ## reads its options before [method run]'s "--", so it can't go through it.
 static func run_gdunit4(path: String) -> Outcome:
 	var args: PackedStringArray = [
@@ -50,7 +50,8 @@ static func run_gdunit4(path: String) -> Outcome:
 	var output := []
 	var outcome := Outcome.new()
 	outcome.exit_code = OS.execute(OS.get_executable_path(), args, output, true)
-	outcome.output = RegEx.create_from_string("\u001b\\[[0-9;]*m").sub("".join(output), "", true)
+	var text := "".join(output).replace("\r\n", "\n")
+	outcome.output = RegEx.create_from_string("\u001b\\[[0-9;]*m").sub(text, "", true)
 	return outcome
 
 

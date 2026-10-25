@@ -47,6 +47,13 @@ jobs:
       - run: just build
       - run: just import
       - run: just test
+      - name: Upload the snapshots that differ
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: received-${{ matrix.os }}
+          path: tests/approvals/*.received.txt
+          if-no-files-found: ignore
       - name: Smoke-test the package in a fresh project
         run: |
           just package
